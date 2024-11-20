@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useContext, ReactElement } from "react";
-import { Container, Typography, Box, Grid, Paper, Avatar, Button, Tooltip } from "@mui/material";
+import { Container, Typography, Box, Avatar, Button, Tooltip } from "@mui/material";
 import { motion } from "framer-motion";
 import { AuthContext } from "@/contexts/AuthContext";
 import { NotificationContext } from "@/contexts/NotificationContext";
@@ -22,7 +22,7 @@ export default function DashboardPage(): ReactElement {
       notify("Please log in to access the dashboard.", "warning");
       router.push("/auth/login");
     }
-  }, [isAuthenticated, loading]);
+  }, [isAuthenticated, loading, notify, router]);
 
   if (loading) { // Show loading state
     return (
@@ -35,6 +35,7 @@ export default function DashboardPage(): ReactElement {
   if (!isAuthenticated) { // After loading, if not authenticated, don't render dashboard
     return <div>Loading...</div>; // Optionally, you can return a placeholder or nothing
   }
+
   const handleOpenPostJobModal = () => {
     setPostJobModalOpen(true);
   };

@@ -1,5 +1,5 @@
 // pages/api/history/posted-jobs.ts
-import type { NextApiRequest, NextApiResponse } from "next";
+import type { NextApiResponse } from "next";
 import dbConnect from "@/utils/db";
 import Job from "@/models/Job";
 import { authenticated, NextApiRequestWithUser } from "@/utils/middleware";

@@ -81,7 +81,7 @@ export default function PostJobModal({ open, onClose }: PostJobModalProps): Reac
     if (open) {
       fetchRoles();
     }
-  }, [open]);
+  }, [open, notify]);
 
   // Fetch venues based on user input with debouncing
   useEffect(() => {
@@ -95,7 +95,7 @@ export default function PostJobModal({ open, onClose }: PostJobModalProps): Reac
         const response = await axios.get("/api/venues", {
           params: { search: venueInput },
         });
-        setVenueOptions(response.data.venues.map((venue: any) => venue.name));
+        setVenueOptions(response.data.venues.map((venue: { name: string }) => venue.name));
       } catch (error: unknown) {
         if (axios.isAxiosError(error)) {
           notify("Failed to fetch venues.", "error");
@@ -112,7 +112,7 @@ export default function PostJobModal({ open, onClose }: PostJobModalProps): Reac
     }, 500); // 500ms debounce
 
     return () => clearTimeout(debounceFetchVenues);
-  }, [venueInput]);
+  }, [venueInput, notify]);
 
   // Fetch cities based on user input with debouncing
   useEffect(() => {
@@ -143,7 +143,7 @@ export default function PostJobModal({ open, onClose }: PostJobModalProps): Reac
     }, 500); // 500ms debounce
 
     return () => clearTimeout(debounceFetchCities);
-  }, [cityInput]);
+  }, [cityInput, notify]);
 
   // Handle form submission
   const handleSubmit = async () => {
@@ -518,8 +518,9 @@ export default function PostJobModal({ open, onClose }: PostJobModalProps): Reac
           onClick={handleSubmit}
           variant="contained"
           color="primary"
+          disabled={loading}
         >
-          Post Job
+          {loading ? "Posting..." : "Post Job"}
         </Button>
       </DialogActions>
     </Dialog>

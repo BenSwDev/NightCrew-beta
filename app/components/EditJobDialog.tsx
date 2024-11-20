@@ -16,7 +16,6 @@ import {
   Box,
   Select,
   FormControl,
-  CircularProgress,
 } from "@mui/material";
 import axios from "@/utils/axios";
 import { NotificationContext } from "@/contexts/NotificationContext";
@@ -84,7 +83,7 @@ export default function EditJobDialog({
     setDescription(job.description || "");
   }, [job]);
 
-  const handleUpdate = async () => {
+  const handleSubmit = async () => {
     // Comprehensive client-side validation
     if (
       !role.trim() ||
@@ -352,8 +351,9 @@ export default function EditJobDialog({
           onClick={handleSubmit}
           variant="contained"
           color="primary"
+          disabled={loading}
         >
-          Post Job
+          {loading ? "Updating..." : "Update Job"}
         </Button>
       </DialogActions>
     </Dialog>

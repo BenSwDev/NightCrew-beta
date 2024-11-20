@@ -1,9 +1,8 @@
 // pages/api/my-jobs/applicants.ts
-import type { NextApiRequest, NextApiResponse } from "next";
+import type { NextApiResponse } from "next";
 import dbConnect from "@/utils/db";
 import Job from "@/models/Job";
 import JobApplication from "@/models/JobApplication";
-import User from "@/models/User";
 import { authenticated, NextApiRequestWithUser } from "@/utils/middleware";
 
 interface Applicant {

@@ -1,5 +1,5 @@
 // pages/api/my-jobs.ts
-import type { NextApiRequest, NextApiResponse } from "next";
+import type { NextApiResponse } from "next";
 import dbConnect from "@/utils/db";
 import Job from "@/models/Job";
 import { authenticated, NextApiRequestWithUser } from "@/utils/middleware";
@@ -32,9 +32,13 @@ export default authenticated(async function handler(
         totalPages: Math.ceil(totalJobs / jobsPerPage),
         currentPage,
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error fetching my jobs:", error);
-      res.status(500).json({ error: "Failed to fetch your jobs." });
+      if (axios.isAxiosError(error)) {
+        res.status(500).json({ error: "Failed to fetch your jobs." });
+      } else {
+        res.status(500).json({ error: "An unexpected error occurred." });
+      }
     }
   } else {
     res.setHeader("Allow", ["GET"]);

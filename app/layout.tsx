@@ -2,7 +2,6 @@
 
 import "../styles/globals.css";
 import Providers from "./Providers";
-import { useContext } from "react";
 
 export const metadata = {
   title: "NightCrew",
@@ -31,5 +30,3 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
-
-

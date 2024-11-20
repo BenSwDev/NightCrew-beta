@@ -1,5 +1,5 @@
 // pages/api/history/applications.ts
-import type { NextApiRequest, NextApiResponse } from "next";
+import type { NextApiResponse } from "next";
 import dbConnect from "@/utils/db";
 import JobApplication from "@/models/JobApplication";
 import Job from "@/models/Job";
@@ -27,26 +27,29 @@ export default authenticated(async function handler(
 
   if (method === "GET") {
     try {
-      // Fetch applications that are withdrawn by the user
-      const historyApplications = await JobApplication.find({
-        applicant: req.user.id,
-        status: 'withdrawn',
-      }).populate("job", "role venue date");
+      if (!req.user) {
+        return res.status(401).json({ error: "Unauthorized. User information is missing." });
+      }
 
-      const formattedApplications: HistoryApplication[] = historyApplications.map((app) => ({
+      // Use explicit type for query results
+      const applications = await JobApplication.find({ applicant: req.user.id })
+        .populate<{ job: Job }>("job")
+        .sort({ appliedAt: -1 });
+
+      const formattedApplications: HistoryApplication[] = applications.map((app) => ({
         _id: app._id.toString(),
         job: {
-          _id: (app.job as any)._id.toString(),
-          role: (app.job as any).role,
-          venue: (app.job as any).venue,
-          date: (app.job as any).date,
+          _id: app.job._id.toString(),
+          role: app.job.role,
+          venue: app.job.venue,
+          date: app.job.date,
         },
         appliedAt: app.appliedAt.toISOString(),
         status: app.status as 'withdrawn',
       }));
 
       res.status(200).json({ historyApplications: formattedApplications });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error fetching history applications:", error);
       res.status(500).json({ error: "Failed to fetch history applications." });
     }

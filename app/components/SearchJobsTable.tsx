@@ -87,9 +87,13 @@ export default function SearchJobsTable(): ReactElement {
       console.log("Jobs fetched:", response.data.jobs); // Debugging
       setJobs(response.data.jobs);
       setTotalJobs(response.data.totalJobs); // Set totalJobs
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error fetching jobs:", error);
-      notify(error.response?.data?.error || "Failed to fetch jobs.", "error");
+      if (axios.isAxiosError(error)) {
+        notify(error.response?.data?.error || "Failed to fetch jobs.", "error");
+      } else {
+        notify("An unexpected error occurred.", "error");
+      }
     } finally {
       setLoading(false);
     }
@@ -107,9 +111,13 @@ export default function SearchJobsTable(): ReactElement {
       // Optionally, refresh the jobs list or remove the applied job
       setJobs((prevJobs) => prevJobs.filter((job) => job._id !== jobId));
       setTotalJobs((prevTotal) => prevTotal - 1);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error applying to job:", error);
-      notify(error.response?.data?.error || "Failed to apply to job.", "error");
+      if (axios.isAxiosError(error)) {
+        notify(error.response?.data?.error || "Failed to apply to job.", "error");
+      } else {
+        notify("An unexpected error occurred.", "error");
+      }
     }
   };
 

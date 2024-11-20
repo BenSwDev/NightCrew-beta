@@ -1,12 +1,15 @@
 // pages/api/jobs.ts
-import type { NextApiRequest, NextApiResponse } from "next";
+import type { NextApiResponse } from "next";
 import dbConnect from "@/utils/db";
 import Job from "@/models/Job";
 import JobApplication from "@/models/JobApplication";
 import { authenticated, NextApiRequestWithUser } from "@/utils/middleware";
 import { parseISO, isAfter } from "date-fns";
 
-export default authenticated(async function handler(req: NextApiRequestWithUser, res: NextApiResponse) {
+export default authenticated(async function handler(
+  req: NextApiRequestWithUser,
+  res: NextApiResponse
+) {
   const { method, query, user } = req;
 
   await dbConnect();
@@ -63,9 +66,13 @@ export default authenticated(async function handler(req: NextApiRequestWithUser,
         totalJobs, // Return totalJobs for accurate pagination
         currentPage,
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error fetching jobs:", error);
-      res.status(500).json({ error: "Failed to fetch jobs." });
+      if (axios.isAxiosError(error)) {
+        res.status(500).json({ error: "Failed to fetch jobs." });
+      } else {
+        res.status(500).json({ error: "An unexpected error occurred." });
+      }
     }
   } else if (method === "POST") {
     try {
@@ -119,9 +126,13 @@ export default authenticated(async function handler(req: NextApiRequestWithUser,
       });
 
       res.status(201).json(job);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error creating job:", error);
-      res.status(500).json({ error: "Failed to create job." });
+      if (axios.isAxiosError(error)) {
+        res.status(500).json({ error: "Failed to create job." });
+      } else {
+        res.status(500).json({ error: "An unexpected error occurred." });
+      }
     }
   } else {
     res.setHeader("Allow", ["GET", "POST"]);
