@@ -48,6 +48,8 @@
     "@types/react": "18.2.14",
     "@types/react-dom": "18.2.7",
     "@types/react-slick": "^0.23.13",
+    "eslint": "9.15.0",
+    "eslint-config-next": "15.0.3",
     "i18next-parser": "^9.0.2",
     "i18next-scanner": "^4.6.0",
     "typescript": "5.1.6"

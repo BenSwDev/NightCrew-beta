@@ -2,7 +2,7 @@
 import { NextApiRequest, NextApiResponse, NextApiHandler } from "next";
 import { verifyToken, isTokenExpired, UserPayload } from "./auth";
 
-interface NextApiRequestWithUser extends NextApiRequest {
+export interface NextApiRequestWithUser extends NextApiRequest {
   user?: UserPayload;
 }
 

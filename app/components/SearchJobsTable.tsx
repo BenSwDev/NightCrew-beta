@@ -229,7 +229,7 @@ export default function SearchJobsTable(): ReactElement {
                           <TableCell align="center">
                             <Tooltip
                               title={
-                                job.createdBy.email === user.email
+                                !user || job.createdBy.email === user.email
                                   ? "You cannot apply to your own job"
                                   : "Apply to this job"
                               }
@@ -311,7 +311,7 @@ export default function SearchJobsTable(): ReactElement {
                         color="primary"
                         startIcon={<SendIcon />}
                         onClick={() => handleApply(job._id)}
-                        disabled={job.createdBy.email === user.email}
+                        disabled={!user || job.createdBy.email === user.email}
                         component={motion.button}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}

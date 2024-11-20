@@ -39,7 +39,7 @@ export default authenticated(async function handler(
       // Find all jobs created by the user, including deleted jobs
       const userJobs = await Job.find({ createdBy: req.user.id })
         .setOptions({ includeDeleted: true }) // Include deleted jobs
-        .select("_id role venue date deletedAt")
+        .select("_id role venue date deletedAt isActive")
         .lean(); // Use lean for faster queries
 
       if (userJobs.length === 0) {

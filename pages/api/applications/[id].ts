@@ -18,11 +18,25 @@ export default authenticated(async function handler(
     return res.status(400).json({ error: "Invalid application ID." });
   }
 
-  const application = await JobApplication.findById(id).populate('job');
+const application = await JobApplication.findById(id).populate("job");
 
-  if (!application) {
-    return res.status(404).json({ error: "Application not found." });
-  }
+if (!application) {
+  return res.status(404).json({ error: "Application not found." });
+}
+
+if (!("createdBy" in application.job)) {
+  return res.status(400).json({ error: "Job is not properly populated." });
+}
+
+if (!req.user) {
+  return res.status(401).json({ error: "Unauthorized. User information is missing." });
+}
+
+// Ensure the authenticated user is the owner of the job
+if (application.job.createdBy.toString() !== req.user.id) {
+  return res.status(403).json({ error: "You are not authorized to update this application." });
+}
+
 
   switch (method) {
     case "GET":

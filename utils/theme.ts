@@ -1,11 +1,8 @@
-// utils/theme.ts
 import { PaletteMode } from "@mui/material";
 import { deepPurple, amber, teal, grey, pink } from "@mui/material/colors";
 import { createTheme } from "@mui/material/styles";
 
-export const getDesignTokens = (mode: PaletteMode, direction: "ltr" | "rtl") => ({
-  direction, // Set the direction
-
+export const getDesignTokens = (mode: PaletteMode) => ({
   palette: {
     mode,
     ...(mode === "light"
@@ -82,7 +79,7 @@ export const getDesignTokens = (mode: PaletteMode, direction: "ltr" | "rtl") => 
       color: "text.secondary",
     },
     button: {
-      textTransform: "none",
+      textTransform: "none" as "none",
       fontWeight: 600,
     },
   },

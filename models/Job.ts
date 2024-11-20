@@ -24,6 +24,12 @@ export interface IJob extends Document {
   isActive?: boolean; // Virtual field
 }
 
+// Define an interface for the Job Model with static methods
+interface IJobModel extends Model<IJob> {
+  findWithDeleted(filter?: any): ReturnType<typeof Job.find>;
+  findActive(filter?: any): ReturnType<typeof Job.find>;
+}
+
 const LocationSchema: Schema<ILocation> = new Schema(
   {
     city: { type: String, required: true },
@@ -64,12 +70,21 @@ JobSchema.set("toObject", { virtuals: true });
 
 // Pre middleware to conditionally exclude deleted jobs from find queries
 JobSchema.pre(/^find/, function (next) {
-  // Check if the query has the flag to include deleted jobs
-  if (!this.getOptions().includeDeleted) {
-    this.where({ deletedAt: null });
+  const query: any = this; // `this` refers to the query instance
+  if (!query.options?.includeDeleted) {
+    query.where({ deletedAt: null });
   }
   next();
 });
 
-const Job: Model<IJob> = mongoose.models.Job || mongoose.model<IJob>("Job", JobSchema);
+// Static methods for querying jobs
+JobSchema.statics.findWithDeleted = function (filter = {}) {
+  return this.find(filter).setOptions({ includeDeleted: true });
+};
+
+JobSchema.statics.findActive = function (filter = {}) {
+  return this.find({ ...filter, deletedAt: null });
+};
+
+const Job: IJobModel = mongoose.models.Job as IJobModel || mongoose.model<IJob, IJobModel>("Job", JobSchema);
 export default Job;

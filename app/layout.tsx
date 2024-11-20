@@ -2,7 +2,6 @@
 
 import "../styles/globals.css";
 import Providers from "./Providers";
-import { LanguageContext } from "../contexts/LanguageContext";
 import { useContext } from "react";
 
 export const metadata = {

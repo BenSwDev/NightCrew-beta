@@ -33,9 +33,8 @@ export default function DashboardPage(): ReactElement {
   }
 
   if (!isAuthenticated) { // After loading, if not authenticated, don't render dashboard
-    return null; // Optionally, you can return a placeholder or nothing
+    return <div>Loading...</div>; // Optionally, you can return a placeholder or nothing
   }
-
   const handleOpenPostJobModal = () => {
     setPostJobModalOpen(true);
   };

@@ -4,10 +4,10 @@ import { IUser } from "./User";
 import { IJob } from "./Job";
 
 export interface IJobApplication extends Document {
-  job: mongoose.Types.ObjectId | IJob;
+  job: mongoose.Types.ObjectId | IJob; // Can be either ObjectId or populated
   applicant: mongoose.Types.ObjectId | IUser;
   appliedAt: Date;
-  status: 'applied' | 'connected' | 'declined' | 'withdrawn'; // New field
+  status: 'applied' | 'connected' | 'declined' | 'withdrawn';
 }
 
 const JobApplicationSchema: Schema<IJobApplication> = new Schema(
@@ -22,7 +22,8 @@ const JobApplicationSchema: Schema<IJobApplication> = new Schema(
 
 // Pre middleware to exclude withdrawn applications from find queries
 JobApplicationSchema.pre(/^find/, function (next) {
-  this.where({ status: { $ne: 'withdrawn' } });
+  const query: mongoose.Query<any, IJobApplication> = this as mongoose.Query<any, IJobApplication>; // Cast `this` to `Query`
+  query.where({ status: { $ne: "withdrawn" } }); // Apply condition to exclude withdrawn applications
   next();
 });
 
