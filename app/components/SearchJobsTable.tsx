@@ -238,7 +238,7 @@ export default function SearchJobsTable(): ReactElement {
                                 <IconButton
                                   color="primary"
                                   onClick={() => handleApply(job._id)}
-                                  disabled={job.createdBy.email === user.email}
+                                  disabled={!user || job.createdBy.email === user.email}
                                 >
                                   <SendIcon />
                                 </IconButton>
