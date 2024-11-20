@@ -1,12 +1,12 @@
 // pages/api/jobs.ts
-import type { NextApiRequest, NextApiResponse } from "next";
+import type { NextApiResponse } from "next";
 import dbConnect from "@/utils/db";
 import Job from "@/models/Job";
 import JobApplication from "@/models/JobApplication";
 import { authenticated, NextApiRequestWithUser } from "@/utils/middleware";
 import { parseISO, isAfter } from "date-fns";
 import type { FilterQuery } from "mongoose";
-import axios from "axios"; // Ensure axios is imported
+import axios from "axios";
 
 export default authenticated(async function handler(
   req: NextApiRequestWithUser,
@@ -22,7 +22,7 @@ export default authenticated(async function handler(
       const jobsPerPage = parseInt(limit as string, 10);
       const currentPage = parseInt(page as string, 10);
 
-      let filter: FilterQuery<typeof Job> = {};
+      const filter: FilterQuery<typeof Job> = {}; // Changed from `let` to `const`
 
       // Get current date and time
       const now = new Date();

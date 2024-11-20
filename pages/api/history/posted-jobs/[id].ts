@@ -4,21 +4,6 @@ import dbConnect from "@/utils/db";
 import Job from "@/models/Job";
 import { authenticated, NextApiRequestWithUser } from "@/utils/middleware";
 
-interface HistoryJob {
-  _id: string;
-  role: string;
-  venue: string;
-  location: { city: string; street?: string; number?: string };
-  date: string;
-  startTime: string;
-  endTime: string;
-  paymentType: string;
-  paymentAmount: number;
-  currency: string;
-  description?: string;
-  deletedAt?: string | null;
-  isActive: boolean;
-}
 
 export default authenticated(async function handler(
   req: NextApiRequestWithUser,
