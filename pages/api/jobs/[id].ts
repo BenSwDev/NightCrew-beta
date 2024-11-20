@@ -1,5 +1,5 @@
 // pages/api/jobs/[id].ts
-import type { NextApiRequest, NextApiResponse } from "next";
+import type { NextApiResponse } from "next";
 import dbConnect from "@/utils/db";
 import Job from "@/models/Job";
 import { authenticated, NextApiRequestWithUser } from "@/utils/middleware";
@@ -9,7 +9,7 @@ export default authenticated(async function handler(
   res: NextApiResponse
 ) {
   const { method, query } = req;
-  const { id } = query;
+  const { id } = query; // Job ID
 
   await dbConnect();
 
@@ -32,6 +32,7 @@ export default authenticated(async function handler(
     case "GET":
       // Return job details
       return res.status(200).json({ job });
+
     case "PUT":
       // Update job details
       try {
@@ -82,20 +83,25 @@ export default authenticated(async function handler(
         await job.save();
 
         return res.status(200).json({ job });
-      } catch (error) {
+      } catch (error: unknown) {
         console.error("Error updating job:", error);
-        return res.status(500).json({ error: "Failed to update job." });
+        res.status(500).json({ error: "Failed to update job." });
       }
+      break;
+
     case "DELETE":
-      // Soft delete the job by setting deletedAt
+      // Soft delete the job by setting deletedAt and isActive
       try {
         job.deletedAt = new Date();
+        job.isActive = false;
         await job.save();
         return res.status(200).json({ message: "Job deleted successfully." });
-      } catch (error) {
+      } catch (error: unknown) {
         console.error("Error deleting job:", error);
-        return res.status(500).json({ error: "Failed to delete job." });
+        res.status(500).json({ error: "Failed to delete job." });
       }
+      break;
+
     default:
       res.setHeader("Allow", ["GET", "PUT", "DELETE"]);
       return res.status(405).end(`Method ${method} Not Allowed`);

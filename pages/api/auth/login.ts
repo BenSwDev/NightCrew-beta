@@ -1,10 +1,11 @@
 // pages/api/auth/login.ts
 import type { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "@/utils/db";
-import User, { IUser } from "@/models/User";
+import User from "@/models/User"; // Removed 'IUser' from import
 import bcrypt from "bcryptjs";
 import { signToken } from "@/utils/auth";
 import { serialize } from "cookie";
+import axios from "axios"; // Ensure axios is imported if used
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === "POST") {
@@ -58,9 +59,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       };
 
       return res.status(200).json({ user: userResponse });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Login error:", error);
-      return res.status(500).json({ message: "Internal server error." });
+      if (axios.isAxiosError(error)) {
+        res.status(500).json({ error: "Failed to log in." });
+      } else {
+        res.status(500).json({ error: "An unexpected error occurred." });
+      }
     }
   } else {
     res.setHeader("Allow", ["POST"]);

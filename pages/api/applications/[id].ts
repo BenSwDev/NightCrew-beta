@@ -1,8 +1,7 @@
 // pages/api/applications/[id].ts
-import type { NextApiRequest, NextApiResponse } from "next";
+import type { NextApiResponse } from "next";
 import dbConnect from "@/utils/db";
 import JobApplication from "@/models/JobApplication";
-import Job from "@/models/Job";
 import { authenticated, NextApiRequestWithUser } from "@/utils/middleware";
 
 export default authenticated(async function handler(
@@ -10,7 +9,7 @@ export default authenticated(async function handler(
   res: NextApiResponse
 ) {
   const { method, query } = req;
-  const { id } = query;
+  const { id } = query; // Application ID
 
   await dbConnect();
 
@@ -18,70 +17,52 @@ export default authenticated(async function handler(
     return res.status(400).json({ error: "Invalid application ID." });
   }
 
-const application = await JobApplication.findById(id).populate("job");
-
-if (!application) {
-  return res.status(404).json({ error: "Application not found." });
-}
-
-if (!("createdBy" in application.job)) {
-  return res.status(400).json({ error: "Job is not properly populated." });
-}
-
-if (!req.user) {
-  return res.status(401).json({ error: "Unauthorized. User information is missing." });
-}
-
-// Ensure the authenticated user is the owner of the job
-if (application.job.createdBy.toString() !== req.user.id) {
-  return res.status(403).json({ error: "You are not authorized to update this application." });
-}
-
-
   switch (method) {
     case "GET":
-      // Return application details
-      return res.status(200).json({ application });
-    case "PUT":
-      // Update application status (connect/decline)
       try {
-        const { status } = req.body;
+        const application = await JobApplication.findById(id).populate("job", "role venue date").lean();
 
-        if (!['connected', 'declined'].includes(status)) {
-          return res.status(400).json({ error: "Invalid status. Must be 'connected' or 'declined'." });
+        if (!application) {
+          return res.status(404).json({ error: "Application not found." });
         }
 
-        // Ensure the authenticated user is the owner of the job
-        if (application.job.createdBy.toString() !== req.user.id) {
-          return res.status(403).json({ error: "You are not authorized to update this application." });
-        }
-
-        application.status = status;
-        await application.save();
-
-        return res.status(200).json({ application });
-      } catch (error) {
-        console.error("Error updating application status:", error);
-        return res.status(500).json({ error: "Failed to update application status." });
-      }
-    case "DELETE":
-      // Withdraw application
-      try {
-        // Ensure the authenticated user is the applicant
+        // Ensure the application belongs to the authenticated user
         if (application.applicant.toString() !== req.user.id) {
-          return res.status(403).json({ error: "You are not authorized to withdraw this application." });
+          return res.status(403).json({ error: "Forbidden. You cannot access this application." });
         }
 
-        application.status = 'withdrawn';
-        await application.save();
-
-        return res.status(200).json({ message: "Application withdrawn successfully." });
-      } catch (error) {
-        console.error("Error withdrawing application:", error);
-        return res.status(500).json({ error: "Failed to withdraw application." });
+        res.status(200).json({ application });
+      } catch (error: unknown) {
+        console.error("Error fetching application:", error);
+        res.status(500).json({ error: "Failed to fetch application." });
       }
+      break;
+
+    case "DELETE":
+      try {
+        const application = await JobApplication.findById(id);
+
+        if (!application) {
+          return res.status(404).json({ error: "Application not found." });
+        }
+
+        // Ensure the authenticated user is the owner of the application
+        if (application.applicant.toString() !== req.user.id) {
+          return res.status(403).json({ error: "You are not authorized to delete this application." });
+        }
+
+        await application.deleteOne();
+
+        res.status(200).json({ message: "Application deleted successfully." });
+      } catch (error: unknown) {
+        console.error("Error deleting application:", error);
+        res.status(500).json({ error: "Failed to delete application." });
+      }
+      break;
+
     default:
-      res.setHeader("Allow", ["GET", "PUT", "DELETE"]);
-      return res.status(405).end(`Method ${method} Not Allowed`);
+      res.setHeader("Allow", ["GET", "DELETE"]);
+      res.status(405).end(`Method ${method} Not Allowed`);
+      break;
   }
 });

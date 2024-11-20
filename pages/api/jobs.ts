@@ -1,10 +1,12 @@
 // pages/api/jobs.ts
-import type { NextApiResponse } from "next";
+import type { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "@/utils/db";
 import Job from "@/models/Job";
 import JobApplication from "@/models/JobApplication";
 import { authenticated, NextApiRequestWithUser } from "@/utils/middleware";
 import { parseISO, isAfter } from "date-fns";
+import type { FilterQuery } from "mongoose";
+import axios from "axios"; // Ensure axios is imported
 
 export default authenticated(async function handler(
   req: NextApiRequestWithUser,
@@ -20,7 +22,7 @@ export default authenticated(async function handler(
       const jobsPerPage = parseInt(limit as string, 10);
       const currentPage = parseInt(page as string, 10);
 
-      let filter: any = {};
+      let filter: FilterQuery<typeof Job> = {};
 
       // Get current date and time
       const now = new Date();
@@ -29,15 +31,13 @@ export default authenticated(async function handler(
 
       // Active jobs are those with date > currentDate
       // or date == currentDate and endTime > currentTime
-      filter = {
-        $or: [
-          { date: { $gt: currentDate } }, // Future dates
-          {
-            date: currentDate,
-            endTime: { $gt: currentTime }
-          },
-        ],
-      };
+      filter.$or = [
+        { date: { $gt: currentDate } }, // Future dates
+        {
+          date: currentDate,
+          endTime: { $gt: currentTime },
+        },
+      ];
 
       // Exclude jobs created by the authenticated user
       if (excludePostedJobs === "true") {

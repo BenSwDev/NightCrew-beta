@@ -1,14 +1,8 @@
-import type { NextApiRequest, NextApiResponse } from "next";
+// pages/api/applications/me.ts
+import type { NextApiResponse } from "next";
 import dbConnect from "@/utils/db";
 import JobApplication from "@/models/JobApplication";
-import type { IJob } from "@/models/Job";
-import type { IJobApplication } from "@/models/JobApplication";
 import { authenticated, NextApiRequestWithUser } from "@/utils/middleware";
-
-// Define a type for a populated JobApplication
-type PopulatedJobApplication = IJobApplication & {
-  job: IJob;
-};
 
 interface Application {
   _id: string;
@@ -42,10 +36,10 @@ export default authenticated(async function handler(
         return res.status(401).json({ error: "Unauthorized. User information is missing." });
       }
 
-      // Use explicit type for query results
-      const applications = (await JobApplication.find({ applicant: req.user.id })
-        .populate<{ job: IJob }>("job")
-        .sort({ appliedAt: -1 })) as PopulatedJobApplication[];
+      const applications = await JobApplication.find({ applicant: req.user.id })
+        .populate("job", "role venue location date startTime endTime paymentType paymentAmount currency description")
+        .sort({ appliedAt: -1 })
+        .lean();
 
       const formattedApplications: Application[] = applications.map((app) => ({
         _id: app._id.toString(),
@@ -66,7 +60,7 @@ export default authenticated(async function handler(
       }));
 
       res.status(200).json({ applications: formattedApplications });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error fetching user applications:", error);
       res.status(500).json({ error: "Failed to fetch applications." });
     }

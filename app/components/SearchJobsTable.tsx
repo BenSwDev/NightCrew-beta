@@ -12,7 +12,6 @@ import {
   FormControlLabel,
   Switch,
   useTheme,
-  Badge,
   Pagination,
   TableContainer,
   Table,
@@ -27,7 +26,7 @@ import axios from "@/utils/axios";
 import { AuthContext } from "@/contexts/AuthContext";
 import { NotificationContext } from "@/contexts/NotificationContext";
 import { motion } from "framer-motion";
-import { fadeIn, staggerContainer, itemFadeIn } from "@/utils/motion";
+import { staggerContainer, itemFadeIn } from "@/utils/motion";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
@@ -57,7 +56,7 @@ export default function SearchJobsTable(): ReactElement {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [page, setPage] = useState<number>(0); // zero-based page index
-  const [rowsPerPage, setRowsPerPage] = useState<number>(10);
+  const [rowsPerPage] = useState<number>(10);
   const [totalJobs, setTotalJobs] = useState<number>(0);
   const [excludeApplied, setExcludeApplied] = useState<boolean>(true); // Existing state
   const [excludePostedJobs, setExcludePostedJobs] = useState<boolean>(false); // New state

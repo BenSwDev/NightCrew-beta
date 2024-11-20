@@ -1,15 +1,31 @@
 // pages/api/history/posted-jobs/[id].ts
-import type { NextApiRequest, NextApiResponse } from "next";
+import type { NextApiResponse } from "next";
 import dbConnect from "@/utils/db";
 import Job from "@/models/Job";
 import { authenticated, NextApiRequestWithUser } from "@/utils/middleware";
+
+interface HistoryJob {
+  _id: string;
+  role: string;
+  venue: string;
+  location: { city: string; street?: string; number?: string };
+  date: string;
+  startTime: string;
+  endTime: string;
+  paymentType: string;
+  paymentAmount: number;
+  currency: string;
+  description?: string;
+  deletedAt?: string | null;
+  isActive: boolean;
+}
 
 export default authenticated(async function handler(
   req: NextApiRequestWithUser,
   res: NextApiResponse
 ) {
   const { method, query } = req;
-  const { id } = query;
+  const { id } = query; // Job ID
 
   await dbConnect();
 
@@ -31,14 +47,20 @@ export default authenticated(async function handler(
   switch (method) {
     case "DELETE":
       try {
-        await job.deleteOne();
+        // Soft delete the job by setting deletedAt and isActive
+        job.deletedAt = new Date();
+        job.isActive = false;
+        await job.save();
         return res.status(200).json({ message: "Job history entry deleted successfully." });
-      } catch (error) {
+      } catch (error: unknown) {
         console.error("Error deleting job history entry:", error);
-        return res.status(500).json({ error: "Failed to delete job history entry." });
+        res.status(500).json({ error: "Failed to delete job history entry." });
       }
+      break;
+
     default:
       res.setHeader("Allow", ["DELETE"]);
-      return res.status(405).end(`Method ${method} Not Allowed`);
+      res.status(405).end(`Method ${method} Not Allowed`);
+      break;
   }
 });
