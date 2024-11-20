@@ -123,12 +123,16 @@ export default function EditJobDialog({
       notify("Job updated successfully.", "success");
       onJobUpdated();
       onClose();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        notify(
+          error.response?.data?.error || "Failed to update job.",
+          "error"
+        );
+      } else {
+        notify("An unexpected error occurred.", "error");
+      }
       console.error("Error updating job:", error);
-      notify(
-        error.response?.data?.error || "Failed to update job.",
-        "error"
-      );
     } finally {
       setLoading(false); // End loading
     }
@@ -298,9 +302,15 @@ export default function EditJobDialog({
                               <MenuItem value="" disabled>
                                 $
                               </MenuItem>
-                              <MenuItem value="USD">$</MenuItem>
-                              <MenuItem value="EUR">€</MenuItem>
-                              <MenuItem value="ILS">₪</MenuItem>
+                              {currencies.map((curr) => (
+                                <MenuItem key={curr} value={curr}>
+                                  {curr === "USD"
+                                    ? "$"
+                                    : curr === "EUR"
+                                    ? "€"
+                                    : "₪"}
+                                </MenuItem>
+                              ))}
                             </Select>
                           </FormControl>
                         </InputAdornment>
@@ -339,16 +349,11 @@ export default function EditJobDialog({
           Cancel
         </Button>
         <Button
-          onClick={handleUpdate}
+          onClick={handleSubmit}
           variant="contained"
           color="primary"
-          disabled={loading}
         >
-          {loading ? (
-            <CircularProgress size={24} color="inherit" />
-          ) : (
-            "Update Job"
-          )}
+          Post Job
         </Button>
       </DialogActions>
     </Dialog>

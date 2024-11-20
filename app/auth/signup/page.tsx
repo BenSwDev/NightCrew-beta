@@ -47,10 +47,15 @@ export default function SignupPage(): ReactElement {
       setUser(response.data.user);
       notify("Signup successful!", "success");
       router.push("/dashboard"); // Redirect to dashboard after signup
-    } catch (err: any) {
-      const errorMessage =
-        err.response?.data?.message || "Signup failed. Please try again.";
-      notify(errorMessage, "error");
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        const errorMessage =
+          err.response?.data?.message || "Signup failed. Please try again.";
+        notify(errorMessage, "error");
+      } else {
+        notify("An unexpected error occurred.", "error");
+      }
+      console.error("Signup error:", err);
     } finally {
       setLoading(false);
     }

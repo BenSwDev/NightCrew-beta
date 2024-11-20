@@ -69,7 +69,12 @@ export default function PostJobModal({ open, onClose }: PostJobModalProps): Reac
       try {
         const response = await axios.get("/api/roles");
         setRoles(response.data.roles);
-      } catch (error) {
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error)) {
+          notify("Failed to fetch roles.", "error");
+        } else {
+          notify("An unexpected error occurred.", "error");
+        }
         console.error("Error fetching roles:", error);
       }
     };
@@ -91,13 +96,22 @@ export default function PostJobModal({ open, onClose }: PostJobModalProps): Reac
           params: { search: venueInput },
         });
         setVenueOptions(response.data.venues.map((venue: any) => venue.name));
-      } catch (error) {
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error)) {
+          notify("Failed to fetch venues.", "error");
+        } else {
+          notify("An unexpected error occurred.", "error");
+        }
         console.error("Error fetching venues:", error);
       } finally {
         setLoadingVenues(false);
       }
     };
-    fetchVenues();
+    const debounceFetchVenues = setTimeout(() => {
+      fetchVenues();
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(debounceFetchVenues);
   }, [venueInput]);
 
   // Fetch cities based on user input with debouncing
@@ -113,13 +127,22 @@ export default function PostJobModal({ open, onClose }: PostJobModalProps): Reac
           params: { search: cityInput },
         });
         setCityOptions(response.data.cities);
-      } catch (error) {
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error)) {
+          notify("Failed to fetch cities.", "error");
+        } else {
+          notify("An unexpected error occurred.", "error");
+        }
         console.error("Error fetching cities:", error);
       } finally {
         setLoadingCities(false);
       }
     };
-    fetchCities();
+    const debounceFetchCities = setTimeout(() => {
+      fetchCities();
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(debounceFetchCities);
   }, [cityInput]);
 
   // Handle form submission
@@ -189,12 +212,16 @@ export default function PostJobModal({ open, onClose }: PostJobModalProps): Reac
       onClose();
       resetForm();
       notify("Job posted successfully!", "success");
-    } catch (error: any) {
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        notify(
+          error.response?.data?.error || "Failed to post job. Please try again.",
+          "error"
+        );
+      } else {
+        notify("An unexpected error occurred.", "error");
+      }
       console.error("Error posting job:", error);
-      notify(
-        error.response?.data?.error || "Failed to post job. Please try again.",
-        "error"
-      );
     }
   };
 
@@ -479,10 +506,19 @@ export default function PostJobModal({ open, onClose }: PostJobModalProps): Reac
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} variant="outlined" color="secondary" disabled={false}>
+        <Button
+          onClick={onClose}
+          variant="outlined"
+          color="secondary"
+          disabled={loading}
+        >
           Cancel
         </Button>
-        <Button onClick={handleSubmit} variant="contained" color="primary">
+        <Button
+          onClick={handleSubmit}
+          variant="contained"
+          color="primary"
+        >
           Post Job
         </Button>
       </DialogActions>

@@ -11,10 +11,8 @@ import {
   IconButton,
   Modal,
   Box,
-  Avatar,
   Tooltip,
   CircularProgress,
-  Grid,
   Paper,
 } from "@mui/material";
 import axios from "@/utils/axios";
@@ -60,9 +58,13 @@ export default function MyApplicationsCard(): ReactElement {
         params: { page: 1, limit: 100 },
       });
       setApplications(response.data.applications);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        notify("Failed to fetch your applications.", "error");
+      } else {
+        notify("An unexpected error occurred.", "error");
+      }
       console.error("Error fetching applications:", error);
-      notify("Failed to fetch your applications.", "error");
     } finally {
       setLoading(false);
     }
@@ -80,9 +82,13 @@ export default function MyApplicationsCard(): ReactElement {
       notify("Application withdrawn successfully.", "success");
       // Remove the application from the state
       setApplications((prevApps) => prevApps.filter((app) => app._id !== applicationId));
-    } catch (error: any) {
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        notify(error.response?.data?.error || "Failed to withdraw application.", "error");
+      } else {
+        notify("An unexpected error occurred.", "error");
+      }
       console.error("Error withdrawing application:", error);
-      notify(error.response?.data?.error || "Failed to withdraw application.", "error");
     }
   };
 

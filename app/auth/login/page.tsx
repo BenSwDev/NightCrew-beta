@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useContext, ReactElement } from "react";
-import { TextField, Button, Container, Typography, Box, Alert, Link as MuiLink } from "@mui/material";
+import { TextField, Button, Container, Typography, Box, Link as MuiLink } from "@mui/material";
 import { useRouter } from "next/navigation";
 import axios from "@/utils/axios"; // Updated import
 import { AuthContext } from "@/contexts/AuthContext";
@@ -30,10 +30,15 @@ export default function LoginPage(): ReactElement {
       setUser(response.data.user);
       notify("Login successful!", "success"); // Notify success
       router.push("/dashboard");
-    } catch (err: any) {
-      const errorMessage =
-        err.response?.data?.message || "Login failed. Please try again.";
-      notify(errorMessage, "error"); // Notify error
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        const errorMessage =
+          err.response?.data?.message || "Login failed. Please try again.";
+        notify(errorMessage, "error"); // Notify error
+      } else {
+        notify("An unexpected error occurred.", "error");
+      }
+      console.error("Login error:", err);
     }
   };
 
