@@ -231,3 +231,4 @@ export default function SignupPage(): ReactElement {
     </Container>
   );
 }
+

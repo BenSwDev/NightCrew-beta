@@ -15,6 +15,8 @@ export default function HomePage(): ReactElement {
   useEffect(() => {
     if (!loading && isAuthenticated) {
       router.push("/dashboard");
+    } else {
+       router.push("/auth/login");
     }
   }, [isAuthenticated, loading, router]);
 
