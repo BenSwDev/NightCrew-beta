@@ -90,7 +90,7 @@ export default authenticated(async function handler(
             avatarUrl: applicantData.avatarUrl,
             phone: applicantData.phone,
             gender: applicantData.gender,
-            dateOfBirth: applicantData.dateOfBirth, // Convert Date to ISO string
+            dateOfBirth: applicantData.dateOfBirth.toString(), // Convert Date to ISO string
             status: app.status as "pending" | "connected" | "declined",
           });
         }
