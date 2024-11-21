@@ -501,8 +501,6 @@ export default function MyJobsCard(): ReactElement {
                                       <Typography>Gender: {applicant.gender || "N/A"}</Typography>
                                     </CardContent>
                                     <CardActions>
-                                      {applicant.status === "Applied" && (
-                                        <>
                                           <Tooltip title="Connect">
                                             <Button
                                               variant="contained"
@@ -514,17 +512,6 @@ export default function MyJobsCard(): ReactElement {
                                               Connect
                                             </Button>
                                           </Tooltip>
-                                          <Tooltip title="Decline">
-                                            <Button
-                                              variant="outlined"
-                                              color="error"
-                                              onClick={() => handleDecline(applicant._id)}
-                                            >
-                                              Decline
-                                            </Button>
-                                          </Tooltip>
-                                        </>
-                                      )}
                                     </CardActions>
                                   </Card>
                                 </Box>
