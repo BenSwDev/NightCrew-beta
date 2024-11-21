@@ -1,10 +1,10 @@
-// app/auth/login/page.tsx
 "use client";
 
 import { useState, useContext, ReactElement } from "react";
 import { TextField, Button, Container, Typography, Box, Link as MuiLink } from "@mui/material";
 import { useRouter } from "next/navigation";
-import axios from "@/utils/axios"; // Updated import
+import axios from "@/utils/axios"; // Custom axios instance
+import { isAxiosError } from "axios"; // Import isAxiosError from axios
 import { AuthContext } from "@/contexts/AuthContext";
 import { NotificationContext } from "@/contexts/NotificationContext"; // Added for notifications
 import { motion } from "framer-motion";
@@ -31,7 +31,7 @@ export default function LoginPage(): ReactElement {
       notify("Login successful!", "success"); // Notify success
       router.push("/dashboard");
     } catch (err: unknown) {
-      if (axios.isAxiosError(err)) {
+      if (isAxiosError(err)) { // Use isAxiosError from axios
         const errorMessage =
           err.response?.data?.message || "Login failed. Please try again.";
         notify(errorMessage, "error"); // Notify error
