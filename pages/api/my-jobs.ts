@@ -10,11 +10,16 @@ export default authenticated(async function handler(
 ) {
   const { method, query } = req;
 
+  // Connect to the database
   await dbConnect();
 
   if (method === "GET") {
     try {
-      const { page = 1, limit = 10 } = query;
+      if (!req.user) {
+        return res.status(401).json({ error: "Unauthorized. User information is missing." });
+      }
+
+      const { page = "1", limit = "10" } = query;
       const jobsPerPage = parseInt(limit as string, 10);
       const currentPage = parseInt(page as string, 10);
 
@@ -23,22 +28,28 @@ export default authenticated(async function handler(
       const totalJobs = await Job.countDocuments(filter);
       const jobs = await Job.find(filter)
         .populate("createdBy", "name email avatarUrl")
-        .sort({ date: 1, startTime: 1 })
+        .sort({ date: 1, startTime: 1 }) // Sort jobs by date and time
         .skip((currentPage - 1) * jobsPerPage)
-        .limit(jobsPerPage);
+        .limit(jobsPerPage)
+        .lean();
+
+      const formattedJobs = jobs.map((job) => ({
+        ...job,
+        _id: (job._id as unknown as string),
+        createdBy: {
+          ...job.createdBy,
+          _id: (job.createdBy._id as unknown as string),
+        },
+      }));
 
       res.status(200).json({
-        jobs,
+        jobs: formattedJobs,
         totalPages: Math.ceil(totalJobs / jobsPerPage),
         currentPage,
       });
     } catch (error: unknown) {
       console.error("Error fetching my jobs:", error);
-      if (axios.isAxiosError(error)) {
-        res.status(500).json({ error: "Failed to fetch your jobs." });
-      } else {
-        res.status(500).json({ error: "An unexpected error occurred." });
-      }
+      res.status(500).json({ error: "Failed to fetch your jobs." });
     }
   } else {
     res.setHeader("Allow", ["GET"]);

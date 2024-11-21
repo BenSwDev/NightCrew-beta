@@ -1,4 +1,3 @@
-// pages/api/my-jobs/applicants.ts
 import type { NextApiResponse } from "next";
 import dbConnect from "@/utils/db";
 import Job from "@/models/Job";
@@ -31,60 +30,74 @@ export default authenticated(async function handler(
 ) {
   const { method } = req;
 
+  // Connect to the database
   await dbConnect();
 
   if (method === "GET") {
     try {
+      if (!req.user) {
+        return res.status(401).json({ error: "Unauthorized. User information is missing." });
+      }
+
       // Find all jobs created by the user, including deleted jobs
       const userJobs = await Job.find({ createdBy: req.user.id })
-        .setOptions({ includeDeleted: true }) // Include deleted jobs
+        .setOptions({ includeDeleted: true })
         .select("_id role venue date deletedAt isActive")
-        .lean(); // Use lean for faster queries
+        .lean();
 
       if (userJobs.length === 0) {
         return res.status(200).json({ jobApplicants: [] });
       }
 
-      const jobIds = userJobs.map((job) => job._id);
+      const jobIds = userJobs.map((job) => job._id.toString());
 
       // Find all applications to these jobs
       const applications = await JobApplication.find({ job: { $in: jobIds } })
         .populate("applicant", "name email avatarUrl")
-        .populate("job", "role venue date deletedAt")
         .lean();
 
       // Group applicants by job
       const groupedApplicants: { [key: string]: Applicant[] } = {};
 
       applications.forEach((app) => {
-        const jobId = app.job._id.toString();
+        const jobId = app.job.toString();
         if (!groupedApplicants[jobId]) {
           groupedApplicants[jobId] = [];
         }
-        groupedApplicants[jobId].push({
-          _id: app._id.toString(),
-          name: app.applicant.name,
-          email: app.applicant.email,
-          avatarUrl: app.applicant.avatarUrl,
-          status: app.status as "pending" | "connected" | "declined",
-        });
+
+        if (app.applicant && typeof app.applicant !== "string") {
+          const applicantData = app.applicant as {
+            _id: string | { toString(): string };
+            name: string;
+            email: string;
+            avatarUrl: string;
+          };
+
+          groupedApplicants[jobId].push({
+            _id: typeof applicantData._id === "string" ? applicantData._id : applicantData._id.toString(),
+            name: applicantData.name,
+            email: applicantData.email,
+            avatarUrl: applicantData.avatarUrl,
+            status: app.status as "pending" | "connected" | "declined",
+          });
+        }
       });
 
       // Prepare the response
       const jobApplicants: JobApplicants[] = userJobs.map((job) => ({
         job: {
-          _id: job._id.toString(),
+          _id: job._id.toString(), // Ensure _id is converted to string
           role: job.role,
           venue: job.venue,
           date: job.date,
-          isActive: job.isActive,
+          isActive: job.isActive || false,
           deletedAt: job.deletedAt ? job.deletedAt.toISOString() : null,
         },
         applicants: groupedApplicants[job._id.toString()] || [],
       }));
 
       res.status(200).json({ jobApplicants });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error fetching applicants:", error);
       res.status(500).json({ error: "Failed to fetch applicants." });
     }
@@ -94,6 +107,10 @@ export default authenticated(async function handler(
 
       if (!jobId || !applicantId || !["connect", "decline"].includes(action)) {
         return res.status(400).json({ error: "Invalid request parameters." });
+      }
+
+      if (!req.user) {
+        return res.status(401).json({ error: "Unauthorized. User information is missing." });
       }
 
       // Verify that the job belongs to the user
@@ -113,7 +130,7 @@ export default authenticated(async function handler(
       await application.save();
 
       res.status(200).json({ message: `Applicant ${action}ed successfully.` });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error updating applicant status:", error);
       res.status(500).json({ error: "Failed to update applicant status." });
     }

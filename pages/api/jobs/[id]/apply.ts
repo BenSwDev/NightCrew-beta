@@ -1,5 +1,5 @@
 // pages/api/jobs/[id]/apply.ts
-import type { NextApiResponse } from "next";
+import type { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "@/utils/db";
 import Job from "@/models/Job";
 import JobApplication from "@/models/JobApplication";
@@ -10,8 +10,9 @@ export default authenticated(async function handler(
   res: NextApiResponse
 ) {
   const { method } = req;
-  const { id } = req.query; // Job ID
+  const { id } = req.query;
 
+  // Connect to the database
   await dbConnect();
 
   if (method === "POST") {
@@ -20,36 +21,47 @@ export default authenticated(async function handler(
         return res.status(400).json({ error: "Invalid job ID." });
       }
 
-      // Check if the job exists and is active
-      const job = await Job.findOne({ _id: id, isActive: true });
-      if (!job) {
-        return res.status(404).json({ error: "Job not found or inactive." });
+      if (!req.user) {
+        return res.status(401).json({ error: "Unauthorized. User information is missing." });
       }
 
-      // Check if the user has already applied to this job
+      // Find the job by ID
+      const job = await Job.findById(id).lean();
+
+      if (!job) {
+        return res.status(404).json({ error: "Job not found." });
+      }
+
+      // Check if the user has already applied for this job
       const existingApplication = await JobApplication.findOne({
         job: id,
         applicant: req.user.id,
-      });
+      }).lean();
 
       if (existingApplication) {
-        return res.status(400).json({ error: "You have already applied to this job." });
+        return res.status(400).json({ error: "You have already applied for this job." });
       }
 
-      // Create a new application
+      // Create a new job application
       const application = await JobApplication.create({
         job: id,
         applicant: req.user.id,
+        appliedAt: new Date(),
+        status: "applied",
       });
 
-      res.status(201).json({ message: "Applied to job successfully.", applicationId: application._id });
+      res.status(201).json({
+        application: {
+          _id: (application._id as unknown as string),
+          job: (application.job as unknown as string),
+          applicant: req.user.id,
+          appliedAt: application.appliedAt.toISOString(),
+          status: application.status,
+        },
+      });
     } catch (error: unknown) {
-      console.error("Error applying to job:", error);
-      if (axios.isAxiosError(error)) {
-        res.status(500).json({ error: "Failed to apply to job." });
-      } else {
-        res.status(500).json({ error: "An unexpected error occurred." });
-      }
+      console.error("Error applying for job:", error);
+      res.status(500).json({ error: "Failed to apply for the job." });
     }
   } else {
     res.setHeader("Allow", ["POST"]);

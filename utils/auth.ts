@@ -1,5 +1,4 @@
-// utils/auth.ts
-import jwt from "jsonwebtoken";
+import jwt, { JwtPayload } from "jsonwebtoken";
 import { IUser } from "@/models/User";
 
 export interface UserPayload {
@@ -9,7 +8,7 @@ export interface UserPayload {
   avatarUrl: string;
 }
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET as string;
 
 if (!JWT_SECRET) {
   throw new Error("JWT_SECRET environment variable is not defined.");
@@ -22,7 +21,7 @@ if (!JWT_SECRET) {
  */
 export function signToken(user: IUser): string {
   const payload: UserPayload = {
-    id: user._id.toString(),
+    id: String(user._id), // Safely convert _id to a string
     name: user.name,
     email: user.email,
     avatarUrl: user.avatarUrl,
@@ -40,8 +39,12 @@ export function verifyToken(token: string): UserPayload | null {
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as UserPayload;
     return decoded;
-  } catch (error) {
-    console.error("JWT verification failed:", error.message);
+  } catch (error: unknown) {
+    if (error instanceof jwt.JsonWebTokenError || error instanceof jwt.TokenExpiredError) {
+      console.error("JWT verification failed:", (error as Error).message);
+    } else {
+      console.error("JWT verification failed:", error);
+    }
     return null;
   }
 }

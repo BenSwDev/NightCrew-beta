@@ -1,7 +1,7 @@
 // pages/api/history/posted-jobs.ts
 import type { NextApiResponse } from "next";
 import dbConnect from "@/utils/db";
-import Job from "@/models/Job";
+import Job, { IJob } from "@/models/Job";
 import { authenticated, NextApiRequestWithUser } from "@/utils/middleware";
 
 interface HistoryJob {
@@ -26,11 +26,16 @@ export default authenticated(async function handler(
 ) {
   const { method } = req;
 
+  // Connect to the database
   await dbConnect();
 
   if (method === "GET") {
     try {
-      // Fetch jobs that are either deleted or expired
+      if (!req.user) {
+        return res.status(401).json({ error: "Unauthorized. User information is missing." });
+      }
+
+      // Fetch jobs that are deleted or expired
       const now = new Date();
       const historyJobs = await Job.find({
         createdBy: req.user.id,
@@ -39,17 +44,23 @@ export default authenticated(async function handler(
           {
             $expr: {
               $lt: [
-                { $dateFromString: { dateString: { $concat: ["$date", "T", "$endTime", ":00"] } } },
+                {
+                  $dateFromString: {
+                    dateString: { $concat: ["$date", "T", "$endTime", ":00"] },
+                  },
+                },
                 now,
               ],
             },
           }, // Expired jobs
         ],
-      }).select("-createdBy");
+      })
+        .select("-createdBy")
+        .lean<IJob[]>();
 
       // Format the jobs
       const formattedJobs: HistoryJob[] = historyJobs.map((job) => ({
-        _id: job._id.toString(),
+        _id: (job._id as unknown as string),
         role: job.role,
         venue: job.venue,
         location: job.location,
@@ -65,7 +76,7 @@ export default authenticated(async function handler(
       }));
 
       res.status(200).json({ historyJobs: formattedJobs });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error fetching history jobs:", error);
       res.status(500).json({ error: "Failed to fetch history jobs." });
     }

@@ -1,68 +1,68 @@
-// pages/api/applications/[id].ts
-import type { NextApiResponse } from "next";
+import type { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "@/utils/db";
-import JobApplication from "@/models/JobApplication";
+import JobApplication, { IJobApplicationPopulated } from "@/models/JobApplication";
 import { authenticated, NextApiRequestWithUser } from "@/utils/middleware";
 
 export default authenticated(async function handler(
   req: NextApiRequestWithUser,
   res: NextApiResponse
 ) {
-  const { method, query } = req;
-  const { id } = query; // Application ID
+  const { method } = req;
+  const { id } = req.query;
 
+  // Connect to the database
   await dbConnect();
 
-  if (!id || typeof id !== "string") {
-    return res.status(400).json({ error: "Invalid application ID." });
-  }
-
-  switch (method) {
-    case "GET":
-      try {
-        const application = await JobApplication.findById(id).populate("job", "role venue date").lean();
-
-        if (!application) {
-          return res.status(404).json({ error: "Application not found." });
-        }
-
-        // Ensure the application belongs to the authenticated user
-        if (!req.user || application.applicant.toString() !== req.user.id) {
-          return res.status(403).json({ error: "Forbidden. You cannot access this application." });
-        }
-
-        res.status(200).json({ application });
-      } catch (error: unknown) {
-        console.error("Error fetching application:", error);
-        res.status(500).json({ error: "Failed to fetch application." });
+  if (method === "GET") {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: "Unauthorized. User information is missing." });
       }
-      break;
 
-    case "DELETE":
-      try {
-        const application = await JobApplication.findById(id);
+      // Find the application by ID and populate the job field
+      const application = await JobApplication.findById(id)
+        .populate({
+          path: "job",
+          select: "role venue location date startTime endTime paymentType paymentAmount currency description",
+        })
+        .lean<IJobApplicationPopulated | null>();
 
-        if (!application) {
-          return res.status(404).json({ error: "Application not found." });
-        }
-
-        // Ensure the authenticated user is the owner of the application
-        if (!req.user || application.applicant.toString() !== req.user.id) {
-          return res.status(403).json({ error: "You are not authorized to delete this application." });
-        }
-
-        await application.deleteOne();
-
-        res.status(200).json({ message: "Application deleted successfully." });
-      } catch (error: unknown) {
-        console.error("Error deleting application:", error);
-        res.status(500).json({ error: "Failed to delete application." });
+      if (!application) {
+        return res.status(404).json({ error: "Application not found." });
       }
-      break;
 
-    default:
-      res.setHeader("Allow", ["GET", "DELETE"]);
-      res.status(405).end(`Method ${method} Not Allowed`);
-      break;
+      // Type guard for populated `job`
+      const job = application.job && typeof application.job !== "string" ? application.job : null;
+
+      const formattedApplication = {
+        _id: String(application._id), // Safely convert _id to string
+        job: job
+          ? {
+              _id: String(job._id), // Safely convert _id to string
+              role: job.role,
+              venue: job.venue,
+              location: job.location,
+              date: job.date,
+              startTime: job.startTime,
+              endTime: job.endTime,
+              paymentType: job.paymentType,
+              paymentAmount: job.paymentAmount,
+              currency: job.currency,
+              description: job.description,
+            }
+          : null,
+        appliedAt: application.appliedAt.toISOString(),
+        status: application.status,
+      };
+
+      return res.status(200).json({ application: formattedApplication });
+    } catch (error: unknown) {
+      console.error("Error fetching application by ID:", error);
+      res.status(500).json({ error: "Failed to fetch application." });
+    }
+  } else {
+    // Handle unsupported HTTP methods
+    res.setHeader("Allow", ["GET"]);
+    res.status(405).end(`Method ${method} Not Allowed`);
   }
 });

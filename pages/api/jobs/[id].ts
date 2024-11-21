@@ -1,109 +1,69 @@
 // pages/api/jobs/[id].ts
-import type { NextApiResponse } from "next";
+
+import type { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "@/utils/db";
-import Job from "@/models/Job";
+import Job, { IJob } from "@/models/Job";
 import { authenticated, NextApiRequestWithUser } from "@/utils/middleware";
 
 export default authenticated(async function handler(
   req: NextApiRequestWithUser,
   res: NextApiResponse
 ) {
-  const { method, query } = req;
-  const { id } = query; // Job ID
+  const { method } = req;
+  const { id } = req.query;
 
+  // Connect to the database
   await dbConnect();
 
-  if (!id || typeof id !== "string") {
-    return res.status(400).json({ error: "Invalid job ID." });
-  }
-
-  const job = await Job.findById(id);
-
-  if (!job) {
-    return res.status(404).json({ error: "Job not found." });
-  }
-
-  // Ensure that the authenticated user is the owner of the job
-  if (job.createdBy.toString() !== req.user.id) {
-    return res.status(403).json({ error: "You are not authorized to modify this job." });
-  }
-
-  switch (method) {
-    case "GET":
-      // Return job details
-      return res.status(200).json({ job });
-
-    case "PUT":
-      // Update job details
-      try {
-        const {
-          role,
-          venue,
-          location,
-          date,
-          startTime,
-          endTime,
-          paymentType,
-          paymentAmount,
-          currency,
-          description,
-        } = req.body;
-
-        // Validate required fields
-        if (
-          !role ||
-          !venue ||
-          !location?.city ||
-          !date ||
-          !startTime ||
-          !endTime ||
-          !paymentType ||
-          !paymentAmount ||
-          !currency
-        ) {
-          return res.status(400).json({ error: "Missing required fields." });
-        }
-
-        // Update fields
-        job.role = role;
-        job.venue = venue;
-        job.location = {
-          city: location.city,
-          street: location.street || undefined,
-          number: location.number || undefined,
-        };
-        job.date = date;
-        job.startTime = startTime;
-        job.endTime = endTime;
-        job.paymentType = paymentType;
-        job.paymentAmount = paymentAmount;
-        job.currency = currency;
-        job.description = description || undefined;
-
-        await job.save();
-
-        return res.status(200).json({ job });
-      } catch (error: unknown) {
-        console.error("Error updating job:", error);
-        res.status(500).json({ error: "Failed to update job." });
+  if (method === "GET") {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: "Unauthorized. User information is missing." });
       }
-      break;
 
-    case "DELETE":
-      // Soft delete the job by setting deletedAt and isActive
-      try {
-        job.deletedAt = new Date();
-        job.isActive = false;
-        await job.save();
-        return res.status(200).json({ message: "Job deleted successfully." });
-      } catch (error: unknown) {
-        console.error("Error deleting job:", error);
-        res.status(500).json({ error: "Failed to delete job." });
+      // Find the job by ID
+      const job = await Job.findById(id)
+        .populate("createdBy", "name email avatarUrl")
+        .lean();
+
+      if (!job) {
+        return res.status(404).json({ error: "Job not found." });
       }
-      break;
 
-    default:
-      res.setHeader("Allow", ["GET", "PUT", "DELETE"]);
-      return res.status(405).end(`Method ${method} Not Allowed`);
+      // Type guard to ensure createdBy is properly populated
+      if (!job.createdBy || typeof job.createdBy === "string") {
+        throw new Error(`createdBy field not populated for job ID ${(job._id as unknown as string)}`);
+      }
+
+      const formattedJob = {
+        _id: (job._id as unknown as string), // Convert _id to string
+        role: job.role,
+        venue: job.venue,
+        location: job.location,
+        date: job.date,
+        startTime: job.startTime,
+        endTime: job.endTime,
+        paymentType: job.paymentType,
+        paymentAmount: job.paymentAmount,
+        currency: job.currency,
+        description: job.description,
+        createdBy: {
+          _id: (job.createdBy._id as unknown as string), // Convert createdBy._id to string
+          name: (job.createdBy as any).name, // Use "as any" to avoid strict type errors
+          email: (job.createdBy as any).email,
+          avatarUrl: (job.createdBy as any).avatarUrl,
+        },
+        isActive: job.isActive || false,
+        deletedAt: job.deletedAt ? job.deletedAt.toISOString() : null,
+      };
+
+      res.status(200).json({ job: formattedJob });
+    } catch (error: unknown) {
+      console.error("Error fetching job by ID:", error);
+      res.status(500).json({ error: "Failed to fetch job." });
+    }
+  } else {
+    res.setHeader("Allow", ["GET"]);
+    res.status(405).end(`Method ${method} Not Allowed`);
   }
 });
