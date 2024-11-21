@@ -31,6 +31,7 @@ html {
   background: var(--background-paper);
 }
 
+
 ::-webkit-scrollbar-thumb {
   background-color: var(--primary-main);
   border-radius: 6px;

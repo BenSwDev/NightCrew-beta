@@ -32,11 +32,11 @@ export const getDesignTokens = (mode: PaletteMode) => ({
           // Dark mode palette
           primary: {
             main: deepPurple[300],
-            contrastText: "#000",
+            contrastText: "#ffffff",
           },
           secondary: {
             main: teal[500],
-            contrastText: "#000",
+            contrastText: "#ffffff",
           },
           error: {
             main: pink[400],
@@ -102,6 +102,13 @@ export const getDesignTokens = (mode: PaletteMode) => ({
         root: {
           "& .MuiOutlinedInput-root": {
             borderRadius: 8,
+            backgroundColor: "transparent", // Remove the default fill
+            "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+            },
+          },
+          "& input:-webkit-autofill": {
+            WebkitBoxShadow: "0 0 0px 1000px transparent inset", // Remove autofill background
+            transition: "background-color 5000s ease-in-out 0s", // Prevent color flash
           },
         },
       },

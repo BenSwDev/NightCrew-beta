@@ -8,15 +8,20 @@ import { serialize } from "cookie";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === "POST") {
-    const { name, email, password } = req.body;
+    const { name, email, password, phone, dob, gender, avatarColor } = req.body;
 
     // Validate input
-    if (!name || !email || !password) {
+    if (!name || !email || !password || !phone || !dob || !gender) {
       return res.status(400).json({ message: "All fields are required." });
     }
 
     if (!/^\S+@\S+\.\S+$/.test(email)) {
       return res.status(400).json({ message: "Invalid email format." });
+    }
+
+    const age = new Date().getFullYear() - new Date(dob).getFullYear();
+    if (age < 18) {
+      return res.status(400).json({ message: "You must be at least 18 years old to sign up." });
     }
 
     if (password.length < 6) {
@@ -26,46 +31,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       await dbConnect();
 
-      // Check if user already exists
       const existingUser = await User.findOne({ email });
       if (existingUser) {
         return res.status(400).json({ message: "Email is already in use." });
       }
 
-      // Hash the password
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      // Create new user
       const newUser: IUser = await User.create({
         name,
         email,
         password: hashedPassword,
+        phone,
+        dob,
+        gender,
+        avatarUrl: `https://via.placeholder.com/150/${avatarColor.substring(1)}/fff.png?text=${name[0].toUpperCase()}`,
       });
 
-      // Sign JWT token
       const token = signToken(newUser);
 
-      // Serialize cookie with updated maxAge
       const serializedCookie = serialize("token", token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "strict",
         path: "/",
-        maxAge: 86400, // 24 hours
+        maxAge: 86400,
       });
 
-      // Set token in cookies
       res.setHeader("Set-Cookie", serializedCookie);
 
-      // Return user data excluding sensitive information
-      const userResponse = {
-        id: newUser._id,
-        name: newUser.name,
-        email: newUser.email,
-        avatarUrl: newUser.avatarUrl,
-      };
-
-      return res.status(201).json({ user: userResponse });
+      return res.status(201).json({ user: { id: newUser._id, name, email } });
     } catch (error) {
       console.error("Signup error:", error);
       return res.status(500).json({ message: "Internal server error." });

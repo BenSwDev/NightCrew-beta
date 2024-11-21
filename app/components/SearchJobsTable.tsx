@@ -20,8 +20,14 @@ import {
   TableHead,
   TableRow,
   Tooltip,
+  Modal,
+  InputLabel,
+  MenuItem,
+  FormControl,
+  Select,
 } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send"; // Use SendIcon as ApplyIcon
+import InfoIcon from "@mui/icons-material/Info"; // Icon for details
 import axios from "@/utils/axios";
 import { AuthContext } from "@/contexts/AuthContext";
 import { NotificationContext } from "@/contexts/NotificationContext";
@@ -31,6 +37,7 @@ import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import { isAxiosError } from "axios";
+import { SelectChangeEvent } from "@mui/material";
 
 interface Job {
   _id: string;
@@ -51,22 +58,55 @@ interface Job {
   };
 }
 
+type DateRangeOption = "all" | "today" | "tomorrow" | "this_week" | "this_month";
+
 export default function SearchJobsTable(): ReactElement {
   const { user } = useContext(AuthContext);
   const { notify } = useContext(NotificationContext);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [page, setPage] = useState<number>(0); // zero-based page index
+  const [page, setPage] = useState<number>(1); // 1-based page index
   const [rowsPerPage] = useState<number>(10);
   const [totalJobs, setTotalJobs] = useState<number>(0);
-  const [excludeApplied, setExcludeApplied] = useState<boolean>(true); // Existing state
-  const [excludePostedJobs, setExcludePostedJobs] = useState<boolean>(false); // New state
+  const [excludeApplied, setExcludeApplied] = useState<boolean>(true); // Exclude Applied Jobs
+  const [excludePostedJobs, setExcludePostedJobs] = useState<boolean>(true); // Exclude My Jobs (set to true by default)
+  const [cities, setCities] = useState<string[]>([]);
+  const [roles, setRoles] = useState<string[]>([]);
+  const [selectedCity, setSelectedCity] = useState<string>("");
+  const [selectedRole, setSelectedRole] = useState<string>("");
+  const [dateRange, setDateRange] = useState<DateRangeOption>("all");
+  const [openModal, setOpenModal] = useState<boolean>(false);
+  const [modalContent, setModalContent] = useState<string>("");
   const theme = useTheme();
 
+  // Function to fetch unique cities and roles for filter dropdowns
+  const fetchFilterOptions = async () => {
+    try {
+      const response = await axios.get("/api/jobs/filters");
+      setCities(response.data.cities);
+      setRoles(response.data.roles);
+    } catch (error: unknown) {
+      console.error("Error fetching filter options:", error);
+      if (isAxiosError(error)) {
+        notify(error.response?.data?.error || "Failed to fetch filter options.", "error");
+      } else {
+        notify("An unexpected error occurred.", "error");
+      }
+    }
+  };
+
   useEffect(() => {
+    fetchFilterOptions();
     fetchJobs();
+
+    // Set up automatic refresh every 60 seconds
+    const interval = setInterval(() => {
+      fetchJobs();
+    }, 60000); // 60,000 ms = 60 seconds
+
+    return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, rowsPerPage, excludeApplied, excludePostedJobs]);
+  }, [page, rowsPerPage, excludeApplied, excludePostedJobs, selectedCity, selectedRole, dateRange]);
 
   const fetchJobs = async () => {
     if (!user) {
@@ -76,14 +116,17 @@ export default function SearchJobsTable(): ReactElement {
 
     setLoading(true);
     try {
-      const response = await axios.get("/api/jobs", {
-        params: {
-          page: page + 1, // API expects 1-based page index
-          limit: rowsPerPage,
-          search: excludeApplied ? "true" : undefined, // Use 'search=true' to exclude applied jobs
-          excludePostedJobs: excludePostedJobs ? "true" : undefined, // Exclude user-posted jobs
-        },
-      });
+      const params: any = {
+        page,
+        limit: rowsPerPage,
+        search: excludeApplied ? "true" : undefined, // Use 'search=true' to exclude applied jobs
+        excludePostedJobs: excludePostedJobs ? "true" : undefined, // Exclude user-posted jobs
+        city: selectedCity || undefined,
+        role: selectedRole || undefined,
+        dateRange: dateRange !== "all" ? dateRange : undefined,
+      };
+
+      const response = await axios.get("/api/jobs", { params });
       console.log("Jobs fetched:", response.data.jobs); // Debugging
       setJobs(response.data.jobs);
       setTotalJobs(response.data.totalJobs); // Set totalJobs
@@ -123,12 +166,37 @@ export default function SearchJobsTable(): ReactElement {
 
   const handleToggleExcludeApplied = (event: React.ChangeEvent<HTMLInputElement>) => {
     setExcludeApplied(event.target.checked);
-    setPage(0); // Reset to first page when toggling
+    setPage(1); // Reset to first page when toggling
   };
 
   const handleToggleExcludePostedJobs = (event: React.ChangeEvent<HTMLInputElement>) => {
     setExcludePostedJobs(event.target.checked);
-    setPage(0); // Reset to first page when toggling
+    setPage(1); // Reset to first page when toggling
+  };
+
+const handleCityChange = (event: SelectChangeEvent<string>) => {
+  setSelectedCity(event.target.value);
+  setPage(1);
+};
+
+  const handleRoleChange = (event: SelectChangeEvent<string>) => {
+    setSelectedRole(event.target.value);
+    setPage(1);
+  };
+
+  const handleDateRangeChange = (event: SelectChangeEvent<DateRangeOption>) => {
+    setDateRange(event.target.value as DateRangeOption);
+    setPage(1);
+  };
+
+  const handleOpenModal = (description: string) => {
+    setModalContent(description);
+    setOpenModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setOpenModal(false);
+    setModalContent("");
   };
 
   // Slider settings
@@ -171,6 +239,7 @@ export default function SearchJobsTable(): ReactElement {
           gap: 2,
         }}
       >
+        {/* Exclusion Toggles */}
         <FormControlLabel
           control={
             <Switch
@@ -180,7 +249,15 @@ export default function SearchJobsTable(): ReactElement {
               color="primary"
             />
           }
-          label="Exclude Applied Jobs"
+          label={
+            <Typography
+              sx={{
+                color: theme.palette.mode === "dark" ? "common.white" : "text.primary",
+              }}
+            >
+              Exclude Applied Jobs
+            </Typography>
+          }
         />
         <FormControlLabel
           control={
@@ -191,8 +268,145 @@ export default function SearchJobsTable(): ReactElement {
               color="primary"
             />
           }
-          label="Exclude My Jobs"
+          label={
+            <Typography
+              sx={{
+                color: theme.palette.mode === "dark" ? "common.white" : "text.primary",
+              }}
+            >
+              Exclude My Jobs
+            </Typography>
+          }
         />
+
+        {/* City Filter */}
+        <FormControl sx={{ minWidth: 120 }}>
+          <InputLabel id="city-filter-label" sx={{ color: theme.palette.mode === "dark" ? "common.white" : "text.primary" }}>
+            City
+          </InputLabel>
+                    <Select
+                      labelId="city-filter-label"
+                      id="city-filter"
+                      value={selectedCity}
+                      label="City"
+                      onChange={handleCityChange}
+                      sx={{
+                        "& .MuiSelect-icon": {
+                          color: theme.palette.mode === "dark" ? "common.white" : "inherit",
+                        },
+                        "& .MuiInputBase-input": {
+                          color: theme.palette.mode === "dark" ? "common.white" : "inherit",
+                        },
+                        "& .MuiOutlinedInput-notchedOutline": {
+                          borderColor: theme.palette.mode === "dark" ? "common.white" : "inherit",
+                        },
+                        "&:hover .MuiOutlinedInput-notchedOutline": {
+                          borderColor: theme.palette.mode === "dark" ? "common.white" : "inherit",
+                        },
+                        "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                          borderColor: theme.palette.mode === "dark" ? "common.white" : "primary.main",
+                        },
+                      }}
+                    >
+                      <MenuItem>
+                        <em>All</em>
+                      </MenuItem>
+                      {cities.map((city) => (
+                        <MenuItem key={city} value={city}>
+                          {city}
+                        </MenuItem>
+                      ))}
+                    </Select>
+        </FormControl>
+
+        {/* Role Filter */}
+        <FormControl sx={{ minWidth: 120 }}>
+          <InputLabel id="role-filter-label" sx={{ color: theme.palette.mode === "dark" ? "common.white" : "text.primary" }}>
+            Role
+          </InputLabel>
+          <Select
+            labelId="role-filter-label"
+            id="role-filter"
+            value={selectedRole}
+            label="Role"
+            onChange={handleRoleChange}
+            sx={{
+              "& .MuiSelect-icon": {
+                color: theme.palette.mode === "dark" ? "common.white" : "inherit",
+              },
+              "& .MuiInputBase-input": {
+                color: theme.palette.mode === "dark" ? "common.white" : "inherit",
+              },
+              "& .MuiOutlinedInput-notchedOutline": {
+                borderColor: theme.palette.mode === "dark" ? "common.white" : "inherit",
+              },
+              "&:hover .MuiOutlinedInput-notchedOutline": {
+                borderColor: theme.palette.mode === "dark" ? "common.white" : "inherit",
+              },
+              "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                borderColor: theme.palette.mode === "dark" ? "common.white" : "primary.main",
+              },
+            }}
+          >
+            <MenuItem>
+              <em>All</em>
+            </MenuItem>
+            {roles.map((role) => (
+              <MenuItem key={role} value={role}>
+                {role}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        {/* Date Range Sort */}
+        <FormControl sx={{ minWidth: 150 }}>
+          <InputLabel id="date-range-sort-label" sx={{ color: theme.palette.mode === "dark" ? "common.white" : "text.primary" }}>
+            Sort By
+          </InputLabel>
+          <Select
+            labelId="date-range-sort-label"
+            id="date-range-sort"
+            value={dateRange}
+            label="Sort By"
+            onChange={handleDateRangeChange}
+            sx={{
+              "& .MuiSelect-icon": {
+                color: theme.palette.mode === "dark" ? "common.white" : "inherit",
+              },
+              "& .MuiInputBase-input": {
+                color: theme.palette.mode === "dark" ? "common.white" : "inherit",
+              },
+              "& .MuiOutlinedInput-notchedOutline": {
+                borderColor: theme.palette.mode === "dark" ? "common.white" : "inherit",
+              },
+              "&:hover .MuiOutlinedInput-notchedOutline": {
+                borderColor: theme.palette.mode === "dark" ? "common.white" : "inherit",
+              },
+              "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                borderColor: theme.palette.mode === "dark" ? "common.white" : "primary.main",
+              },
+            }}
+          >
+            <MenuItem value="all">All</MenuItem>
+            <MenuItem value="today">Today</MenuItem>
+            <MenuItem value="tomorrow">Tomorrow</MenuItem>
+            <MenuItem value="this_week">This Week</MenuItem>
+            <MenuItem value="this_month">This Month</MenuItem>
+          </Select>
+        </FormControl>
+      </Box>
+
+      {/* Results Count */}
+      <Box sx={{ px: 2, mb: 2 }}>
+        <Typography
+          variant="subtitle1"
+          sx={{
+            color: theme.palette.mode === "dark" ? "common.white" : "text.primary",
+          }}
+        >
+          {totalJobs} {totalJobs === 1 ? "job found" : "jobs found"}
+        </Typography>
       </Box>
 
       {loading ? (
@@ -212,27 +426,98 @@ export default function SearchJobsTable(): ReactElement {
                   <Table aria-label="search jobs table">
                     <TableHead>
                       <TableRow>
-                        <TableCell>Role</TableCell>
-                        <TableCell>Venue</TableCell>
-                        <TableCell>City</TableCell>
-                        <TableCell>Date</TableCell>
-                        <TableCell>Time</TableCell>
-                        <TableCell>Payment</TableCell>
-                        <TableCell align="center">Apply</TableCell>
+                        <TableCell
+                          sx={{
+                            color: theme.palette.mode === "dark" ? "common.white" : "text.primary",
+                          }}
+                        >
+                          Role
+                        </TableCell>
+                        <TableCell
+                          sx={{
+                            color: theme.palette.mode === "dark" ? "common.white" : "text.primary",
+                          }}
+                        >
+                          Venue
+                        </TableCell>
+                        <TableCell
+                          sx={{
+                            color: theme.palette.mode === "dark" ? "common.white" : "text.primary",
+                          }}
+                        >
+                          City
+                        </TableCell>
+                        <TableCell
+                          sx={{
+                            color: theme.palette.mode === "dark" ? "common.white" : "text.primary",
+                          }}
+                        >
+                          Date
+                        </TableCell>
+                        <TableCell
+                          sx={{
+                            color: theme.palette.mode === "dark" ? "common.white" : "text.primary",
+                          }}
+                        >
+                          Time
+                        </TableCell>
+                        <TableCell
+                          sx={{
+                            color: theme.palette.mode === "dark" ? "common.white" : "text.primary",
+                          }}
+                        >
+                          Payment
+                        </TableCell>
+                        <TableCell
+                          sx={{
+                            color: theme.palette.mode === "dark" ? "common.white" : "text.primary",
+                          }}
+                        >
+                          Details
+                        </TableCell>
+                        <TableCell
+                          align="center"
+                          sx={{
+                            color: theme.palette.mode === "dark" ? "common.white" : "text.primary",
+                          }}
+                        >
+                          Apply
+                        </TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {jobs.map((job) => (
                         <TableRow key={job._id}>
-                          <TableCell>{job.role}</TableCell>
-                          <TableCell>{job.venue}</TableCell>
-                          <TableCell>{job.location.city}</TableCell>
-                          <TableCell>{new Date(job.date).toLocaleDateString()}</TableCell>
-                          <TableCell>
+                          <TableCell sx={{ color: theme.palette.mode === "dark" ? "common.white" : "text.primary" }}>
+                            {job.role}
+                          </TableCell>
+                          <TableCell sx={{ color: theme.palette.mode === "dark" ? "common.white" : "text.primary" }}>
+                            {job.venue}
+                          </TableCell>
+                          <TableCell sx={{ color: theme.palette.mode === "dark" ? "common.white" : "text.primary" }}>
+                            {job.location.city}
+                          </TableCell>
+                          <TableCell sx={{ color: theme.palette.mode === "dark" ? "common.white" : "text.primary" }}>
+                            {new Date(job.date).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell sx={{ color: theme.palette.mode === "dark" ? "common.white" : "text.primary" }}>
                             {job.startTime} - {job.endTime}
                           </TableCell>
-                          <TableCell>
+                          <TableCell sx={{ color: theme.palette.mode === "dark" ? "common.white" : "text.primary" }}>
                             {job.paymentAmount} {job.currency} ({job.paymentType})
+                          </TableCell>
+                          <TableCell>
+                            {job.description ? (
+                              <IconButton
+                                color="info"
+                                onClick={() => handleOpenModal(job.description!)}
+                                aria-label="view details"
+                              >
+                                <InfoIcon />
+                              </IconButton>
+                            ) : (
+                              "-"
+                            )}
                           </TableCell>
                           <TableCell align="center">
                             <Tooltip
@@ -247,6 +532,7 @@ export default function SearchJobsTable(): ReactElement {
                                   color="primary"
                                   onClick={() => handleApply(job._id)}
                                   disabled={!user || job.createdBy.email === user.email}
+                                  aria-label="apply to job"
                                 >
                                   <SendIcon />
                                 </IconButton>
@@ -276,6 +562,9 @@ export default function SearchJobsTable(): ReactElement {
                       backgroundColor: theme.palette.background.paper,
                       boxShadow: theme.shadows[5],
                       position: "relative",
+                      display: "flex",
+                      flexDirection: "column",
+                      height: "100%",
                     }}
                   >
                     {/* Background Number */}
@@ -293,7 +582,13 @@ export default function SearchJobsTable(): ReactElement {
                     >
                       {jobs.length}
                     </Typography>
-                    <Typography variant="h6" gutterBottom>
+                    <Typography
+                      variant="h6"
+                      gutterBottom
+                      sx={{
+                        color: theme.palette.mode === "dark" ? "common.white" : "text.primary",
+                      }}
+                    >
                       {job.role}
                     </Typography>
                     <Typography variant="subtitle1" color="text.secondary">
@@ -309,11 +604,29 @@ export default function SearchJobsTable(): ReactElement {
                       Payment: {job.paymentAmount} {job.currency} ({job.paymentType})
                     </Typography>
                     {job.description && (
-                      <Typography variant="body2" sx={{ mt: 1 }}>
-                        {job.description}
-                      </Typography>
+                      <Box sx={{ mt: 1 }}>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<InfoIcon />}
+                          onClick={() => handleOpenModal(job.description!)}
+                          sx={{
+                            color: theme.palette.mode === "dark" ? "common.white" : "inherit",
+                            borderColor: theme.palette.mode === "dark" ? "common.white" : "inherit",
+                          }}
+                        >
+                          Details
+                        </Button>
+                      </Box>
                     )}
-                    <Box sx={{ mt: "auto", display: "flex", justifyContent: "flex-end", gap: 1 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "flex-end",
+                        gap: 1,
+                        mt: job.description ? 2 : 1,
+                      }}
+                    >
                       <Button
                         variant="contained"
                         color="primary"
@@ -334,21 +647,65 @@ export default function SearchJobsTable(): ReactElement {
           </Box>
         </>
       ) : (
-        <Typography variant="body1" align="center" sx={{ my: 4 }}>
-          No jobs found.
-        </Typography>
+        <Box sx={{ px: 2, mb: 2 }}>
+          <Typography
+            variant="subtitle1"
+            align="center"
+            sx={{
+              color: theme.palette.mode === "dark" ? "common.white" : "text.primary",
+            }}
+          >
+            No jobs found.
+          </Typography>
+        </Box>
       )}
 
       {/* Pagination Controls */}
-      {/* For simplicity, pagination is maintained only for desktop tables */}
       <Box sx={{ display: { xs: "none", md: "flex" }, justifyContent: "center", mt: 2 }}>
         <Pagination
           count={Math.ceil(totalJobs / rowsPerPage)}
-          page={page + 1}
-          onChange={(event, value) => setPage(value - 1)}
+          page={page}
+          onChange={(event, value) => setPage(value)}
           color="primary"
         />
       </Box>
+
+      {/* Job Description Modal */}
+      <Modal
+        open={openModal}
+        onClose={handleCloseModal}
+        aria-labelledby="job-description-modal-title"
+        aria-describedby="job-description-modal-description"
+      >
+        <Box
+          sx={{
+            position: "absolute" as const,
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: { xs: "90%", md: 400 },
+            bgcolor: "background.paper",
+            border: "2px solid #000",
+            boxShadow: 24,
+            p: 4,
+            maxHeight: "80vh",
+            overflowY: "auto",
+            color: theme.palette.mode === "dark" ? "common.white" : "text.primary",
+          }}
+        >
+          <Typography id="job-description-modal-title" variant="h6" component="h2">
+            Job Description
+          </Typography>
+          <Typography id="job-description-modal-description" sx={{ mt: 2 }}>
+            {modalContent}
+          </Typography>
+          <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
+            <Button variant="contained" onClick={handleCloseModal}>
+              Close
+            </Button>
+          </Box>
+        </Box>
+      </Modal>
     </motion.div>
   );
 }

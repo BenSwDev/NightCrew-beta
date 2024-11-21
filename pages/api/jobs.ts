@@ -4,7 +4,17 @@ import dbConnect from "@/utils/db";
 import Job, { IJob } from "@/models/Job";
 import JobApplication from "@/models/JobApplication";
 import { authenticated, NextApiRequestWithUser } from "@/utils/middleware";
-import { parseISO, isAfter } from "date-fns";
+import {
+  parseISO,
+  isAfter,
+  startOfToday,
+  endOfToday,
+  addDays,
+  startOfWeek,
+  endOfWeek,
+  startOfMonth,
+  endOfMonth,
+} from "date-fns";
 import type { FilterQuery } from "mongoose";
 import axios from "axios";
 
@@ -23,7 +33,7 @@ export default authenticated(async function handler(
         return res.status(401).json({ error: "Unauthorized. User information is missing." });
       }
 
-      const { page = "1", limit = "10", search, excludePostedJobs } = query;
+      const { page = "1", limit = "10", search, excludePostedJobs, city, role, dateRange } = query;
       const jobsPerPage = parseInt(limit as string, 10);
       const currentPage = parseInt(page as string, 10);
 
@@ -31,24 +41,50 @@ export default authenticated(async function handler(
 
       // Get current date and time
       const now = new Date();
-      const currentDate = now.toISOString().split("T")[0];
-      const currentTime = now.toTimeString().split(" ")[0];
 
-      // Active jobs are those with date > currentDate
-      // or date == currentDate and endTime > currentTime
-      filter.$or = [
-        { date: { $gt: currentDate } }, // Future dates
-        {
-          date: currentDate,
-          endTime: { $gt: currentTime },
-        },
-      ];
+      // Filter based on dateRange
+      if (dateRange === "today") {
+        const todayStart = startOfToday();
+        const todayEnd = endOfToday();
+        filter.date = {
+          $eq: todayStart.toISOString().split("T")[0], // YYYY-MM-DD
+        };
+      } else if (dateRange === "tomorrow") {
+        const tomorrow = addDays(now, 1);
+        filter.date = {
+          $eq: tomorrow.toISOString().split("T")[0],
+        };
+      } else if (dateRange === "this_week") {
+        const weekStart = startOfWeek(now, { weekStartsOn: 1 }); // Assuming week starts on Monday
+        const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
+        filter.date = {
+          $gte: weekStart.toISOString().split("T")[0],
+          $lte: weekEnd.toISOString().split("T")[0],
+        };
+      } else if (dateRange === "this_month") {
+        const monthStart = startOfMonth(now);
+        const monthEnd = endOfMonth(now);
+        filter.date = {
+          $gte: monthStart.toISOString().split("T")[0],
+          $lte: monthEnd.toISOString().split("T")[0],
+        };
+      } else {
+        // Default active jobs filter
+        filter.$or = [
+          { date: { $gt: now.toISOString().split("T")[0] } }, // Future dates
+          {
+            date: now.toISOString().split("T")[0],
+            endTime: { $gt: now.toTimeString().split(" ")[0] },
+          },
+        ];
+      }
 
       // Exclude jobs created by the authenticated user
       if (excludePostedJobs === "true") {
         filter.createdBy = { $ne: req.user.id };
       }
 
+      // Exclude applied jobs
       if (search === "true") {
         const userId = req.user.id;
 
@@ -57,6 +93,16 @@ export default authenticated(async function handler(
         const appliedJobIds = appliedJobs.map((app) => app.job);
 
         filter._id = { $nin: appliedJobIds };
+      }
+
+      // Filter by city if provided
+      if (city) {
+        filter["location.city"] = city;
+      }
+
+      // Filter by role if provided
+      if (role) {
+        filter.role = role;
       }
 
       const totalJobs = await Job.countDocuments(filter);

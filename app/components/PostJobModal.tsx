@@ -467,18 +467,9 @@ export default function PostJobModal({ open, onClose }: PostJobModalProps): Reac
                               inputProps={{ "aria-label": "Currency" }}
                               required
                             >
-                              <MenuItem value="" disabled>
-                                $
+                              <MenuItem value="₪" >
+                                ₪
                               </MenuItem>
-                              {currencies.map((curr) => (
-                                <MenuItem key={curr} value={curr}>
-                                  {curr === "USD"
-                                    ? "$"
-                                    : curr === "EUR"
-                                    ? "€"
-                                    : "₪"}
-                                </MenuItem>
-                              ))}
                             </Select>
                           </FormControl>
                         </InputAdornment>
@@ -510,8 +501,8 @@ export default function PostJobModal({ open, onClose }: PostJobModalProps): Reac
       <DialogActions>
         <Button
           onClick={onClose}
-          variant="outlined"
-          color="secondary"
+          variant="contained"
+          color="primary"
           disabled={loading}
         >
           Cancel

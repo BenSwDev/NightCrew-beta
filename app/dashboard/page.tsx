@@ -1,4 +1,3 @@
-// app/dashboard/page.tsx
 "use client";
 
 import { useState, useEffect, useContext, ReactElement } from "react";
@@ -13,27 +12,30 @@ import DashboardSearchJobs from "../components/DashboardSearchJobs";
 
 export default function DashboardPage(): ReactElement {
   const [isPostJobModalOpen, setPostJobModalOpen] = useState(false);
-  const { user, isAuthenticated, loading } = useContext(AuthContext); // Destructure loading
+  const { user, isAuthenticated, loading } = useContext(AuthContext);
   const { notify } = useContext(NotificationContext);
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !isAuthenticated) { // Check if not loading before redirecting
+    if (!loading && !isAuthenticated) {
+      // Redirect unauthenticated users to the login page
       notify("Please log in to access the dashboard.", "warning");
       router.push("/auth/login");
     }
   }, [isAuthenticated, loading, notify, router]);
 
-  if (loading) { // Show loading state
+  if (loading) {
+    // Display a loading state while the authentication status is being determined
     return (
-      <Typography variant="h6" align="center" sx={{ mt: 4 }}>
+      <Typography variant="h6" align="center" sx={{ mt: 8 }}>
         Loading...
       </Typography>
     );
   }
 
-  if (!isAuthenticated) { // After loading, if not authenticated, don't render dashboard
-    return <div>Loading...</div>; // Optionally, you can return a placeholder or nothing
+  if (!isAuthenticated) {
+    // Fallback in case redirection doesn't occur immediately
+    router.push("/");
   }
 
   const handleOpenPostJobModal = () => {
@@ -46,40 +48,6 @@ export default function DashboardPage(): ReactElement {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 8, mb: 4 }}>
-      {/* User Information */}
-      <Box
-        component={motion.div}
-        initial={{ opacity: 0, x: -100 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.5 }}
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          mb: 6,
-          p: 3,
-          borderRadius: 2,
-          backgroundColor: "background.paper",
-          boxShadow: 3,
-        }}
-      >
-        {user ? (
-          <>
-            <Avatar src={user.avatarUrl} alt={user.name} sx={{ width: 80, height: 80, mr: 3 }} />
-            <Box>
-              <Typography variant="h5" gutterBottom>
-                Hello, {user.name}!
-              </Typography>
-              <Typography variant="body1" color="text.secondary">
-                Welcome back to NightCrew. Search your next job or post one to hire new employees.
-              </Typography>
-            </Box>
-          </>
-        ) : (
-          <Typography variant="h6" color="error">
-            User data is unavailable.
-          </Typography>
-        )}
-      </Box>
 
       {/* Action Buttons */}
       <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 4 }}>
@@ -93,18 +61,15 @@ export default function DashboardPage(): ReactElement {
         <Box sx={{ width: 16 }} /> {/* Spacer */}
         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} transition={{ duration: 0.3 }}>
           <Tooltip title="View Notifications">
-            <Button variant="outlined" color="primary">
-              View Notifications
+            <Button variant="contained" color="primary">
+              Found a bug? Report Us!
             </Button>
           </Tooltip>
         </motion.div>
       </Box>
 
       {/* Post Job Modal */}
-      <PostJobModal
-        open={isPostJobModalOpen}
-        onClose={handleClosePostJobModal}
-      />
+      <PostJobModal open={isPostJobModalOpen} onClose={handleClosePostJobModal} />
 
       {/* Search Jobs and Cards */}
       <DashboardSearchJobs />
