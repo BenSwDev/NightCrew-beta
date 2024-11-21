@@ -60,13 +60,14 @@ interface Applicant {
   status: "Applied" | "Connected" | "Declined";
 }
 
-
 interface JobApplicants {
   job: {
     _id: string;
     role: string;
     venue: string;
     date: string;
+    isActive: boolean;
+    deletedAt?: string | null;
   };
   applicants: Applicant[];
 }
@@ -85,8 +86,10 @@ export default function MyJobsCard(): ReactElement {
   const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
 
   // Helper function to calculate age from date of birth
-  function calculateAge(dob: string): number {
+  function calculateAge(dob: string): number | string {
+    if (!dob) return "N/A";
     const birthDate = new Date(dob);
+    if (isNaN(birthDate.getTime())) return "N/A";
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
     const m = today.getMonth() - birthDate.getMonth();
@@ -163,9 +166,10 @@ export default function MyJobsCard(): ReactElement {
   };
 
   const handleViewApplicants = async (jobId: string) => {
-    // Toggle the applicants view if the same job is clicked again
+    // Toggle the applicants modal if the same job is clicked again
     if (selectedJobApplicants?.job._id === jobId) {
       setSelectedJobApplicants(null);
+      setApplicantsModalOpen(false);
       return;
     }
 
@@ -391,17 +395,17 @@ export default function MyJobsCard(): ReactElement {
                                             {applicant.status.charAt(0).toUpperCase() + applicant.status.slice(1)}
                                           </TableCell>
                                           <TableCell align="center">
-                                                <Tooltip title="Connect">
-                                                  <Button
-                                                    variant="contained"
-                                                    color="success"
-                                                    startIcon={<FaWhatsapp />}
-                                                    onClick={() => handleConnect(applicant)}
-                                                    sx={{ mr: 1 }}
-                                                  >
-                                                    Connect
-                                                  </Button>
-                                                </Tooltip>
+                                              <Tooltip title="Connect">
+                                                <Button
+                                                  variant="contained"
+                                                  color="success"
+                                                  startIcon={<FaWhatsapp />}
+                                                  onClick={() => handleConnect(applicant)}
+                                                  sx={{ mr: 1 }}
+                                                >
+                                                  Connect
+                                                </Button>
+                                              </Tooltip>
                                           </TableCell>
                                         </TableRow>
                                       ))}
@@ -466,64 +470,7 @@ export default function MyJobsCard(): ReactElement {
                           View Applicants
                         </Button>
                       </CardActions>
-                      {/* Applicants Slider */}
-                      {selectedJobApplicants?.job._id === job._id && (
-                        <Box sx={{ mt: 2 }}>
-                          <Typography variant="subtitle1" gutterBottom>
-                            Applicants for {selectedJobApplicants.job.role} at {selectedJobApplicants.job.venue} on{" "}
-                            {selectedJobApplicants.job.date}
-                          </Typography>
-                          {selectedJobApplicants.applicants.length > 0 ? (
-                            <Slider {...sliderSettings}>
-                              {selectedJobApplicants.applicants.map((applicant) => (
-                                <Box key={applicant._id} sx={{ p: 2 }}>
-                                  <Card>
-                                    <CardContent>
-                                      <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-                                        <Avatar
-                                          src={applicant.avatarUrl}
-                                          alt={applicant.name}
-                                          sx={{ width: 56, height: 56, mr: 2 }}
-                                        >
-                                          {applicant.name.charAt(0)}
-                                        </Avatar>
-                                        <Box>
-                                          <Typography variant="h6">{applicant.name}</Typography>
-                                          <Typography variant="body2" color="text.secondary">
-                                            {applicant.email || "No Email Provided"}
-                                          </Typography>
-                                        </Box>
-                                      </Box>
-                                      <Typography>
-                                        Age: {applicant.dateOfBirth ? calculateAge(applicant.dateOfBirth) : "N/A"}
-                                      </Typography>
-                                      <Typography>Phone: {applicant.phone || "N/A"}</Typography>
-                                      <Typography>Gender: {applicant.gender || "N/A"}</Typography>
-                                    </CardContent>
-                                    <CardActions>
-                                          <Tooltip title="Connect">
-                                            <Button
-                                              variant="contained"
-                                              color="success"
-                                              startIcon={<FaWhatsapp />}
-                                              onClick={() => handleConnect(applicant)}
-                                              sx={{ mr: 1 }}
-                                            >
-                                              Connect
-                                            </Button>
-                                          </Tooltip>
-                                    </CardActions>
-                                  </Card>
-                                </Box>
-                              ))}
-                            </Slider>
-                          ) : (
-                            <Typography variant="body2" color="text.secondary">
-                              No applicants for this job.
-                            </Typography>
-                          )}
-                        </Box>
-                      )}
+                      {/* Removed inline Applicants Slider for Mobile/Tablet */}
                     </Card>
                   </Box>
                 ))}
@@ -593,8 +540,6 @@ export default function MyJobsCard(): ReactElement {
                             <Typography>Gender: {applicant.gender || "N/A"}</Typography>
                           </CardContent>
                           <CardActions>
-                            {applicant.status === "Applied" && (
-                              <>
                                 <Tooltip title="Connect">
                                   <Button
                                     variant="contained"
@@ -606,17 +551,6 @@ export default function MyJobsCard(): ReactElement {
                                     Connect
                                   </Button>
                                 </Tooltip>
-                                <Tooltip title="Decline">
-                                  <Button
-                                    variant="outlined"
-                                    color="error"
-                                    onClick={() => handleDecline(applicant._id)}
-                                  >
-                                    Decline
-                                  </Button>
-                                </Tooltip>
-                              </>
-                            )}
                           </CardActions>
                         </Card>
                       </Box>
