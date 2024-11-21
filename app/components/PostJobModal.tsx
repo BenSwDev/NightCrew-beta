@@ -61,7 +61,7 @@ export default function PostJobModal({ open, onClose }: PostJobModalProps): Reac
   const [description, setDescription] = useState<string>("");
 
   const [roles, setRoles] = useState<string[]>([]);
-  const [loading, setLoading] = useState<boolean>(false); // Added loading state
+  const [loading] = useState<boolean>(false); // Added loading state
   const { notify } = useContext(NotificationContext);
 
   // Fetch existing roles on component mount

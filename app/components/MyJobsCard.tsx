@@ -95,13 +95,9 @@ export default function MyJobsCard(): ReactElement {
       } else {
         setJobs([]); // Ensures no stale state if no jobs are returned
       }
-    } catch (error: unknown) {
-      if (axios.isAxiosError(error)) {
-        notify("Failed to fetch your jobs.", "error");
-      } else {
-        notify("An unexpected error occurred.", "error");
-      }
+    } catch (error: any) {
       console.error("Error fetching my jobs:", error);
+      notify("Failed to fetch your jobs.", "error");
     } finally {
       setLoading(false);
     }
@@ -127,13 +123,9 @@ export default function MyJobsCard(): ReactElement {
       notify("Job deleted successfully.", "success");
       // Remove the job from the state
       setJobs((prevJobs) => prevJobs.filter((job) => job._id !== jobId));
-    } catch (error: unknown) {
-      if (axios.isAxiosError(error)) {
-        notify(error.response?.data?.error || "Failed to delete job.", "error");
-      } else {
-        notify("An unexpected error occurred.", "error");
-      }
+    } catch (error: any) {
       console.error("Error deleting job:", error);
+      notify(error.response?.data?.error || "Failed to delete job.", "error");
     }
   };
 
@@ -149,13 +141,9 @@ export default function MyJobsCard(): ReactElement {
       } else {
         notify("No applicants found for this job.", "info");
       }
-    } catch (error: unknown) {
-      if (axios.isAxiosError(error)) {
-        notify("Failed to fetch applicants.", "error");
-      } else {
-        notify("An unexpected error occurred.", "error");
-      }
+    } catch (error: any) {
       console.error("Error fetching applicants:", error);
+      notify("Failed to fetch applicants.", "error");
     }
   };
 
@@ -173,13 +161,9 @@ export default function MyJobsCard(): ReactElement {
       }
       // Redirect to WhatsApp
       window.open("https://wa.me/9720584757879", "_blank");
-    } catch (error: unknown) {
-      if (axios.isAxiosError(error)) {
-        notify(error.response?.data?.error || "Failed to connect applicant.", "error");
-      } else {
-        notify("An unexpected error occurred.", "error");
-      }
+    } catch (error: any) {
       console.error("Error connecting applicant:", error);
+      notify(error.response?.data?.error || "Failed to connect applicant.", "error");
     }
   };
 
@@ -195,13 +179,9 @@ export default function MyJobsCard(): ReactElement {
       if (selectedJobApplicants) {
         handleViewApplicants(selectedJobApplicants.job._id);
       }
-    } catch (error: unknown) {
-      if (axios.isAxiosError(error)) {
-        notify(error.response?.data?.error || "Failed to decline applicant.", "error");
-      } else {
-        notify("An unexpected error occurred.", "error");
-      }
+    } catch (error: any) {
       console.error("Error declining applicant:", error);
+      notify(error.response?.data?.error || "Failed to decline applicant.", "error");
     }
   };
 

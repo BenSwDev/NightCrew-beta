@@ -17,7 +17,8 @@ import {
   Select,
   FormControl,
 } from "@mui/material";
-import axios from "@/utils/axios";
+import axios from "@/utils/axios"; // Custom axios instance
+import { isAxiosError } from "axios"; // Import isAxiosError directly from axios
 import { NotificationContext } from "@/contexts/NotificationContext";
 
 interface Job {
@@ -123,7 +124,7 @@ export default function EditJobDialog({
       onJobUpdated();
       onClose();
     } catch (error: unknown) {
-      if (axios.isAxiosError(error)) {
+      if (isAxiosError(error)) { // Use isAxiosError from axios
         notify(
           error.response?.data?.error || "Failed to update job.",
           "error"
@@ -359,3 +360,6 @@ export default function EditJobDialog({
     </Dialog>
   );
 }
+
+// Define currencies array if not defined elsewhere
+const currencies = ["USD", "EUR", "ILS"];

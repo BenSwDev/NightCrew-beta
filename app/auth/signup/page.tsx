@@ -1,4 +1,3 @@
-// app/auth/signup/page.tsx
 "use client";
 
 import { useState, useContext, ReactElement } from "react";
@@ -11,7 +10,8 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { useRouter } from "next/navigation";
-import axios from "@/utils/axios";
+import axios from "@/utils/axios"; // Custom axios instance
+import { isAxiosError } from "axios"; // Import isAxiosError from axios
 import { AuthContext } from "@/contexts/AuthContext";
 import { NotificationContext } from "@/contexts/NotificationContext";
 
@@ -48,7 +48,7 @@ export default function SignupPage(): ReactElement {
       notify("Signup successful!", "success");
       router.push("/dashboard"); // Redirect to dashboard after signup
     } catch (err: unknown) {
-      if (axios.isAxiosError(err)) {
+      if (isAxiosError(err)) { // Use isAxiosError from axios
         const errorMessage =
           err.response?.data?.message || "Signup failed. Please try again.";
         notify(errorMessage, "error");

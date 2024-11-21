@@ -15,7 +15,8 @@ import {
   CircularProgress,
   Paper,
 } from "@mui/material";
-import axios from "@/utils/axios";
+import axios from "@/utils/axios"; // Custom axios instance
+import { isAxiosError } from "axios"; // Import isAxiosError directly from axios
 import { NotificationContext } from "@/contexts/NotificationContext";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { motion } from "framer-motion";
@@ -59,7 +60,7 @@ export default function MyApplicationsCard(): ReactElement {
       });
       setApplications(response.data.applications);
     } catch (error: unknown) {
-      if (axios.isAxiosError(error)) {
+      if (isAxiosError(error)) { // Use isAxiosError from axios
         notify("Failed to fetch your applications.", "error");
       } else {
         notify("An unexpected error occurred.", "error");
@@ -83,7 +84,7 @@ export default function MyApplicationsCard(): ReactElement {
       // Remove the application from the state
       setApplications((prevApps) => prevApps.filter((app) => app._id !== applicationId));
     } catch (error: unknown) {
-      if (axios.isAxiosError(error)) {
+      if (isAxiosError(error)) { // Use isAxiosError from axios
         notify(error.response?.data?.error || "Failed to withdraw application.", "error");
       } else {
         notify("An unexpected error occurred.", "error");
