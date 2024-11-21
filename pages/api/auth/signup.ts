@@ -1,4 +1,3 @@
-// pages/api/auth/signup.ts
 import type { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "@/utils/db";
 import User, { IUser } from "@/models/User";
@@ -43,8 +42,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         email,
         password: hashedPassword,
         phone,
-        dob,
         gender,
+        dateOfBirth: new Date(dob),
         avatarUrl: `https://via.placeholder.com/150/${avatarColor.substring(1)}/fff.png?text=${name[0].toUpperCase()}`,
       });
 
@@ -60,7 +59,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       res.setHeader("Set-Cookie", serializedCookie);
 
-      return res.status(201).json({ user: { id: newUser._id, name, email } });
+      return res.status(201).json({
+        user: {
+          id: newUser._id,
+          name: newUser.name,
+          email: newUser.email,
+          phone: newUser.phone,
+          gender: newUser.gender,
+          dateOfBirth: newUser.dateOfBirth,
+          avatarUrl: newUser.avatarUrl,
+        },
+      });
     } catch (error) {
       console.error("Signup error:", error);
       return res.status(500).json({ message: "Internal server error." });

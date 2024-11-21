@@ -5,7 +5,7 @@ import Providers from "./Providers";
 
 export const metadata = {
   title: "NightCrew",
-  description: "A perfectly responsive Next.js application",
+  description: "Connecting job seekers with nightlife venues",
   manifest: "/manifest.json",
   icons: {
     icon: "/icons/icon-192x192.png",

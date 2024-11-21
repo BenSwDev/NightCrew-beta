@@ -1,3 +1,5 @@
+// pages/api/my-jobs/applicants.ts
+
 import type { NextApiResponse } from "next";
 import dbConnect from "@/utils/db";
 import Job from "@/models/Job";
@@ -9,8 +11,12 @@ interface Applicant {
   name: string;
   email: string;
   avatarUrl: string;
+  phone: string;
+  dateOfBirth: string;
+  gender: string;
   status: "pending" | "connected" | "declined";
 }
+
 
 interface JobApplicants {
   job: {
@@ -53,7 +59,7 @@ export default authenticated(async function handler(
 
       // Find all applications to these jobs
       const applications = await JobApplication.find({ job: { $in: jobIds } })
-        .populate("applicant", "name email avatarUrl")
+        .populate("applicant", "name email avatarUrl phone gender dateOfBirth") // Added fields
         .lean();
 
       // Group applicants by job
@@ -70,14 +76,21 @@ export default authenticated(async function handler(
             _id: string | { toString(): string };
             name: string;
             email: string;
+            phone: string;
+            gender: string;
+            dateOfBirth: Date; // Expecting a Date type here
             avatarUrl: string;
           };
+
 
           groupedApplicants[jobId].push({
             _id: typeof applicantData._id === "string" ? applicantData._id : applicantData._id.toString(),
             name: applicantData.name,
             email: applicantData.email,
             avatarUrl: applicantData.avatarUrl,
+            phone: applicantData.phone,
+            gender: applicantData.gender,
+            dateOfBirth: applicantData.dateOfBirth, // Convert Date to ISO string
             status: app.status as "pending" | "connected" | "declined",
           });
         }
@@ -86,7 +99,7 @@ export default authenticated(async function handler(
       // Prepare the response
       const jobApplicants: JobApplicants[] = userJobs.map((job) => ({
         job: {
-          _id: job._id.toString(), // Ensure _id is converted to string
+          _id: job._id.toString(),
           role: job.role,
           venue: job.venue,
           date: job.date,

@@ -60,6 +60,7 @@ interface Applicant {
   status: "Applied" | "Connected" | "Declined";
 }
 
+
 interface JobApplicants {
   job: {
     _id: string;
@@ -83,6 +84,25 @@ export default function MyJobsCard(): ReactElement {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
 
+  // Helper function to calculate age from date of birth
+  function calculateAge(dob: string): number {
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  }
+
+  // Helper function to check if a job is relevant based on current date and time
+  const isJobRelevant = (job: Job): boolean => {
+    const jobDateTime = new Date(`${job.date}T${job.endTime}`);
+    const now = new Date();
+    return jobDateTime >= now;
+  };
+
   const handleOpenModal = async () => {
     setOpenModal(true);
     setLoading(true);
@@ -92,19 +112,21 @@ export default function MyJobsCard(): ReactElement {
       });
 
       if (response.data && response.data.jobs && response.data.jobs.length > 0) {
-        setJobs(response.data.jobs);
+        // Filter jobs to show only relevant ones
+        const relevantJobs: Job[] = response.data.jobs.filter(isJobRelevant);
+        setJobs(relevantJobs);
       } else {
         setJobs([]); // Ensures no stale state if no jobs are returned
       }
     } catch (error: unknown) {
-        if (isAxiosError(error)) {
-          console.error("Error fetching my jobs:", error.response?.data || error.message);
-          notify("Failed to fetch your jobs.", "error");
-        } else {
-          console.error("Unknown error:", error);
-          notify("An unexpected error occurred.", "error");
-        }
-      } finally {
+      if (isAxiosError(error)) {
+        console.error("Error fetching my jobs:", error.response?.data || error.message);
+        notify("Failed to fetch your jobs.", "error");
+      } else {
+        console.error("Unknown error:", error);
+        notify("An unexpected error occurred.", "error");
+      }
+    } finally {
       setLoading(false);
     }
   };
@@ -130,17 +152,23 @@ export default function MyJobsCard(): ReactElement {
       // Remove the job from the state
       setJobs((prevJobs) => prevJobs.filter((job) => job._id !== jobId));
     } catch (error: unknown) {
-        if (isAxiosError(error)) {
-          console.error("Error deleting job:", error.response?.data || error.message);
-          notify(error.response?.data?.error || "Failed to delete job.", "error");
-        } else {
-          console.error("Unknown error:", error);
-          notify("An unexpected error occurred.", "error");
-        }
+      if (isAxiosError(error)) {
+        console.error("Error deleting job:", error.response?.data || error.message);
+        notify(error.response?.data?.error || "Failed to delete job.", "error");
+      } else {
+        console.error("Unknown error:", error);
+        notify("An unexpected error occurred.", "error");
       }
+    }
   };
 
   const handleViewApplicants = async (jobId: string) => {
+    // Toggle the applicants view if the same job is clicked again
+    if (selectedJobApplicants?.job._id === jobId) {
+      setSelectedJobApplicants(null);
+      return;
+    }
+
     try {
       const response = await axios.get("/api/my-jobs/applicants", {
         params: { jobId },
@@ -153,39 +181,28 @@ export default function MyJobsCard(): ReactElement {
         notify("No applicants found for this job.", "info");
       }
     } catch (error: unknown) {
-        if (isAxiosError(error)) {
-          console.error("Error fetching applicants:", error.response?.data || error.message);
-          notify("Failed to fetch applicants.", "error");
-        } else {
-          console.error("Unknown error:", error);
-          notify("An unexpected error occurred.", "error");
-        }
+      if (isAxiosError(error)) {
+        console.error("Error fetching applicants:", error.response?.data || error.message);
+        notify("Failed to fetch applicants.", "error");
+      } else {
+        console.error("Unknown error:", error);
+        notify("An unexpected error occurred.", "error");
       }
+    }
   };
 
-  const handleConnect = async (applicationId: string) => {
-    try {
-      await axios.put("/api/my-jobs/applicants", {
-        jobId: selectedJobApplicants?.job._id,
-        applicantId: applicationId,
-        action: "connect",
-      });
-      notify("Applicant connected successfully.", "success");
-      // Refresh the applicants list
-      if (selectedJobApplicants) {
-        handleViewApplicants(selectedJobApplicants.job._id);
-      }
-      // Redirect to WhatsApp
-      window.open("https://wa.me/9720584757879", "_blank");
-    } catch (error: unknown) {
-        if (isAxiosError(error)) {
-          console.error("Error connecting applicant:", error.response?.data || error.message);
-          notify(error.response?.data?.error || "Failed to connect applicant.", "error");
-        } else {
-          console.error("Unknown error:", error);
-          notify("An unexpected error occurred.", "error");
-        }
-      }
+  // Updated handleConnect to redirect to applicant's WhatsApp with pre-filled message
+  const handleConnect = (applicant: Applicant) => {
+    if (!applicant.phone) {
+      notify("Applicant does not have a phone number.", "error");
+      return;
+    }
+
+    // Remove any non-digit characters from the phone number
+    const phoneNumber = applicant.phone.replace(/\D/g, "");
+    const message = encodeURIComponent("Hi, I saw you are interested in the job. Is this a good time to talk?");
+    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;
+    window.open(whatsappUrl, "_blank");
   };
 
   const handleDecline = async (applicationId: string) => {
@@ -201,14 +218,14 @@ export default function MyJobsCard(): ReactElement {
         handleViewApplicants(selectedJobApplicants.job._id);
       }
     } catch (error: unknown) {
-        if (isAxiosError(error)) {
-          console.error("Error declining applicant:", error.response?.data || error.message);
-          notify(error.response?.data?.error || "Failed to decline applicant.", "error");
-        } else {
-          console.error("Unknown error:", error);
-          notify("An unexpected error occurred.", "error");
-        }
+      if (isAxiosError(error)) {
+        console.error("Error declining applicant:", error.response?.data || error.message);
+        notify(error.response?.data?.error || "Failed to decline applicant.", "error");
+      } else {
+        console.error("Unknown error:", error);
+        notify("An unexpected error occurred.", "error");
       }
+    }
   };
 
   // Slider settings for jobs and applicants
@@ -374,30 +391,17 @@ export default function MyJobsCard(): ReactElement {
                                             {applicant.status.charAt(0).toUpperCase() + applicant.status.slice(1)}
                                           </TableCell>
                                           <TableCell align="center">
-                                            {applicant.status === "Applied" && (
-                                              <>
                                                 <Tooltip title="Connect">
                                                   <Button
                                                     variant="contained"
                                                     color="success"
                                                     startIcon={<FaWhatsapp />}
-                                                    onClick={() => handleConnect(applicant._id)}
+                                                    onClick={() => handleConnect(applicant)}
                                                     sx={{ mr: 1 }}
                                                   >
                                                     Connect
                                                   </Button>
                                                 </Tooltip>
-                                                <Tooltip title="Decline">
-                                                  <Button
-                                                    variant="outlined"
-                                                    color="error"
-                                                    onClick={() => handleDecline(applicant._id)}
-                                                  >
-                                                    Decline
-                                                  </Button>
-                                                </Tooltip>
-                                              </>
-                                            )}
                                           </TableCell>
                                         </TableRow>
                                       ))}
@@ -462,6 +466,77 @@ export default function MyJobsCard(): ReactElement {
                           View Applicants
                         </Button>
                       </CardActions>
+                      {/* Applicants Slider */}
+                      {selectedJobApplicants?.job._id === job._id && (
+                        <Box sx={{ mt: 2 }}>
+                          <Typography variant="subtitle1" gutterBottom>
+                            Applicants for {selectedJobApplicants.job.role} at {selectedJobApplicants.job.venue} on{" "}
+                            {selectedJobApplicants.job.date}
+                          </Typography>
+                          {selectedJobApplicants.applicants.length > 0 ? (
+                            <Slider {...sliderSettings}>
+                              {selectedJobApplicants.applicants.map((applicant) => (
+                                <Box key={applicant._id} sx={{ p: 2 }}>
+                                  <Card>
+                                    <CardContent>
+                                      <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                                        <Avatar
+                                          src={applicant.avatarUrl}
+                                          alt={applicant.name}
+                                          sx={{ width: 56, height: 56, mr: 2 }}
+                                        >
+                                          {applicant.name.charAt(0)}
+                                        </Avatar>
+                                        <Box>
+                                          <Typography variant="h6">{applicant.name}</Typography>
+                                          <Typography variant="body2" color="text.secondary">
+                                            {applicant.email || "No Email Provided"}
+                                          </Typography>
+                                        </Box>
+                                      </Box>
+                                      <Typography>
+                                        Age: {applicant.dateOfBirth ? calculateAge(applicant.dateOfBirth) : "N/A"}
+                                      </Typography>
+                                      <Typography>Phone: {applicant.phone || "N/A"}</Typography>
+                                      <Typography>Gender: {applicant.gender || "N/A"}</Typography>
+                                    </CardContent>
+                                    <CardActions>
+                                      {applicant.status === "Applied" && (
+                                        <>
+                                          <Tooltip title="Connect">
+                                            <Button
+                                              variant="contained"
+                                              color="success"
+                                              startIcon={<FaWhatsapp />}
+                                              onClick={() => handleConnect(applicant)}
+                                              sx={{ mr: 1 }}
+                                            >
+                                              Connect
+                                            </Button>
+                                          </Tooltip>
+                                          <Tooltip title="Decline">
+                                            <Button
+                                              variant="outlined"
+                                              color="error"
+                                              onClick={() => handleDecline(applicant._id)}
+                                            >
+                                              Decline
+                                            </Button>
+                                          </Tooltip>
+                                        </>
+                                      )}
+                                    </CardActions>
+                                  </Card>
+                                </Box>
+                              ))}
+                            </Slider>
+                          ) : (
+                            <Typography variant="body2" color="text.secondary">
+                              No applicants for this job.
+                            </Typography>
+                          )}
+                        </Box>
+                      )}
                     </Card>
                   </Box>
                 ))}
@@ -538,7 +613,7 @@ export default function MyJobsCard(): ReactElement {
                                     variant="contained"
                                     color="success"
                                     startIcon={<FaWhatsapp />}
-                                    onClick={() => handleConnect(applicant._id)}
+                                    onClick={() => handleConnect(applicant)}
                                     sx={{ mr: 1 }}
                                   >
                                     Connect
@@ -588,16 +663,4 @@ export default function MyJobsCard(): ReactElement {
       )}
     </>
   );
-
-  // Helper function to calculate age from date of birth
-  function calculateAge(dob: string): number {
-    const birthDate = new Date(dob);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const m = today.getMonth() - birthDate.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    return age;
-  }
 }
