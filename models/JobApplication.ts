@@ -30,4 +30,8 @@ JobApplicationSchema.pre(/^find/, function (next) {
 const JobApplication: Model<IJobApplication> =
   mongoose.models.JobApplication || mongoose.model<IJobApplication>("JobApplication", JobApplicationSchema);
 
+type PopulatedJobApplication = Omit<IJobApplication, "job"> & {
+  job: IJob; // Use the full IJob type for populated jobs
+};
+
 export default JobApplication;

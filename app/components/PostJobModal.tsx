@@ -21,6 +21,7 @@ import {
 } from "@mui/material";
 import axios from "@/utils/axios";
 import { NotificationContext } from "@/contexts/NotificationContext";
+import { isAxiosError } from "axios";
 
 interface PostJobModalProps {
   open: boolean;
@@ -71,7 +72,7 @@ export default function PostJobModal({ open, onClose }: PostJobModalProps): Reac
         const response = await axios.get("/api/roles");
         setRoles(response.data.roles);
       } catch (error: unknown) {
-        if (axios.isAxiosError(error)) {
+        if (isAxiosError(error)) {
           notify("Failed to fetch roles.", "error");
         } else {
           notify("An unexpected error occurred.", "error");
@@ -98,7 +99,7 @@ export default function PostJobModal({ open, onClose }: PostJobModalProps): Reac
         });
         setVenueOptions(response.data.venues.map((venue: { name: string }) => venue.name));
       } catch (error: unknown) {
-        if (axios.isAxiosError(error)) {
+        if (isAxiosError(error)) {
           notify("Failed to fetch venues.", "error");
         } else {
           notify("An unexpected error occurred.", "error");
@@ -129,7 +130,7 @@ export default function PostJobModal({ open, onClose }: PostJobModalProps): Reac
         });
         setCityOptions(response.data.cities);
       } catch (error: unknown) {
-        if (axios.isAxiosError(error)) {
+        if (isAxiosError(error)) {
           notify("Failed to fetch cities.", "error");
         } else {
           notify("An unexpected error occurred.", "error");
@@ -214,7 +215,7 @@ export default function PostJobModal({ open, onClose }: PostJobModalProps): Reac
       resetForm();
       notify("Job posted successfully!", "success");
     } catch (error: unknown) {
-      if (axios.isAxiosError(error)) {
+      if (isAxiosError(error)) {
         notify(
           error.response?.data?.error || "Failed to post job. Please try again.",
           "error"

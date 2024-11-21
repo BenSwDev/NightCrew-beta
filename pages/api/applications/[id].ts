@@ -27,7 +27,7 @@ export default authenticated(async function handler(
         }
 
         // Ensure the application belongs to the authenticated user
-        if (application.applicant.toString() !== req.user.id) {
+        if (!req.user || application.applicant.toString() !== req.user.id) {
           return res.status(403).json({ error: "Forbidden. You cannot access this application." });
         }
 
@@ -47,7 +47,7 @@ export default authenticated(async function handler(
         }
 
         // Ensure the authenticated user is the owner of the application
-        if (application.applicant.toString() !== req.user.id) {
+        if (!req.user || application.applicant.toString() !== req.user.id) {
           return res.status(403).json({ error: "You are not authorized to delete this application." });
         }
 

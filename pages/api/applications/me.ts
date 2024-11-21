@@ -1,8 +1,12 @@
-// pages/api/applications/me.ts
 import type { NextApiResponse } from "next";
 import dbConnect from "@/utils/db";
 import JobApplication from "@/models/JobApplication";
 import { authenticated, NextApiRequestWithUser } from "@/utils/middleware";
+import type { IJob } from "@/models/Job";
+
+type PopulatedJobApplication = Omit<IJobApplication, "job"> & {
+  job: IJob;
+};
 
 interface Application {
   _id: string;
@@ -36,11 +40,13 @@ export default authenticated(async function handler(
         return res.status(401).json({ error: "Unauthorized. User information is missing." });
       }
 
-      const applications = await JobApplication.find({ applicant: req.user.id })
+      // Fetch and type applications
+      const applications = (await JobApplication.find({ applicant: req.user.id })
         .populate("job", "role venue location date startTime endTime paymentType paymentAmount currency description")
         .sort({ appliedAt: -1 })
-        .lean();
+        .lean()) as PopulatedJobApplication[];
 
+      // Map applications to API response format
       const formattedApplications: Application[] = applications.map((app) => ({
         _id: app._id.toString(),
         job: {

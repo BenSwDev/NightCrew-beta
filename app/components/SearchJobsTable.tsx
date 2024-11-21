@@ -30,6 +30,7 @@ import { staggerContainer, itemFadeIn } from "@/utils/motion";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
+import { isAxiosError } from "axios";
 
 interface Job {
   _id: string;
@@ -88,7 +89,7 @@ export default function SearchJobsTable(): ReactElement {
       setTotalJobs(response.data.totalJobs); // Set totalJobs
     } catch (error: unknown) {
       console.error("Error fetching jobs:", error);
-      if (axios.isAxiosError(error)) {
+      if (isAxiosError(error)) {
         notify(error.response?.data?.error || "Failed to fetch jobs.", "error");
       } else {
         notify("An unexpected error occurred.", "error");
@@ -112,7 +113,7 @@ export default function SearchJobsTable(): ReactElement {
       setTotalJobs((prevTotal) => prevTotal - 1);
     } catch (error: unknown) {
       console.error("Error applying to job:", error);
-      if (axios.isAxiosError(error)) {
+      if (isAxiosError(error)) {
         notify(error.response?.data?.error || "Failed to apply to job.", "error");
       } else {
         notify("An unexpected error occurred.", "error");
