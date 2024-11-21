@@ -205,7 +205,7 @@ export default function MyJobsCard(): ReactElement {
     // Remove any non-digit characters from the phone number
     const phoneNumber = applicant.phone.replace(/\D/g, "");
     const message = encodeURIComponent("Hi, I saw you are interested in the job. Is this a good time to talk?");
-    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;
+    const whatsappUrl = `https://wa.me/+972${phoneNumber}?text=${message}`;
     window.open(whatsappUrl, "_blank");
   };
 
